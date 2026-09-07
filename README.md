@@ -1,5 +1,8 @@
 # Torchboy
 
+[![CI](https://github.com/apshoemaker/torchboy/actions/workflows/ci.yml/badge.svg)](https://github.com/apshoemaker/torchboy/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **An experiment in how far coding agents can actually go.**
 
 Not a serious game — an academic exercise. The interesting artefact is not the
