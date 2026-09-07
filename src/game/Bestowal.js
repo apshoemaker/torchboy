@@ -16,9 +16,9 @@ import * as THREE from 'three';
 const COLD = new THREE.Color(0.62, 0.88, 1.0);
 const HOT = new THREE.Color(1.0, 1.0, 1.0);
 
-const GATHER = 0.38;      // light pools on the floor
-const RISE = 1.18;        // ...and climbs
-const ENTER = 1.32;       // ...and goes in
+const GATHER = 0.38; // light pools on the floor
+const RISE = 1.18; // ...and climbs
+const ENTER = 1.32; // ...and goes in
 const DONE = 1.95;
 
 function glowTexture() {
@@ -42,20 +42,34 @@ export class Bestowal {
     this.t = Infinity;
     this.from = new THREE.Vector3();
 
-    const add = { blending: THREE.AdditiveBlending, transparent: true, depthWrite: false };
+    const add = {
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+    };
 
     this.core = new THREE.Mesh(
       new THREE.IcosahedronGeometry(0.17, 2),
-      new THREE.MeshBasicMaterial({ ...add, color: COLD.clone() }));
+      new THREE.MeshBasicMaterial({ ...add, color: COLD.clone() }),
+    );
 
-    this.halo = new THREE.Sprite(new THREE.SpriteMaterial({
-      ...add, map: glowTexture(), color: COLD.clone(),
-    }));
+    this.halo = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        ...add,
+        map: glowTexture(),
+        color: COLD.clone(),
+      }),
+    );
 
     // the ring lies flat on the stone and opens outward as the light gathers
     this.ring = new THREE.Mesh(
       new THREE.RingGeometry(0.28, 0.42, 40),
-      new THREE.MeshBasicMaterial({ ...add, color: COLD.clone(), side: THREE.DoubleSide }));
+      new THREE.MeshBasicMaterial({
+        ...add,
+        color: COLD.clone(),
+        side: THREE.DoubleSide,
+      }),
+    );
     this.ring.rotation.x = -Math.PI / 2;
 
     // Kept well under the torch (~30 at full). At 9x brightness this peaked at
@@ -69,7 +83,9 @@ export class Bestowal {
     scene.add(this.group);
   }
 
-  get active() { return this.t < DONE; }
+  get active() {
+    return this.t < DONE;
+  }
 
   /**
    * @param at     floor position under him
@@ -92,7 +108,10 @@ export class Bestowal {
 
   /** @returns true on the frame the light actually enters him */
   update(dt, chest) {
-    if (!this.active) { this.group.visible = false; return false; }
+    if (!this.active) {
+      this.group.visible = false;
+      return false;
+    }
     const prev = this.t;
     this.t += dt;
     const t = this.t;
@@ -109,26 +128,26 @@ export class Bestowal {
     let y, scale, bright;
     if (t < GATHER) {
       const p = t / GATHER;
-      y = this.from.y + 0.06 + p * 0.10;
-      scale = p * p * 1.15;                     // swells into being
+      y = this.from.y + 0.06 + p * 0.1;
+      scale = p * p * 1.15; // swells into being
       bright = p;
     } else if (t < RISE) {
       const p = (t - GATHER) / (RISE - GATHER);
-      const e = p * p * (3 - 2 * p) * 0.58 + p * p * p * 0.42;   // eases, then rushes
+      const e = p * p * (3 - 2 * p) * 0.58 + p * p * p * 0.42; // eases, then rushes
       y = THREE.MathUtils.lerp(this.from.y + 0.16, chest.y, e);
       scale = 1.15 - p * 0.25;
       bright = 1 + p * 0.7;
     } else if (t < ENTER) {
       const p = (t - RISE) / (ENTER - RISE);
       y = chest.y;
-      scale = Math.max(0, 0.9 * (1 - p) ** 0.6);  // collapses into him
-      bright = 1.7 + p * 2.6;                     // and flares as it goes
+      scale = Math.max(0, 0.9 * (1 - p) ** 0.6); // collapses into him
+      bright = 1.7 + p * 2.6; // and flares as it goes
       if (prev < RISE) entered = true;
     } else {
       const p = (t - ENTER) / (DONE - ENTER);
       y = chest.y;
       scale = 0;
-      bright = Math.max(0, 4.3 * (1 - p) ** 2);   // afterglow inside him
+      bright = Math.max(0, 4.3 * (1 - p) ** 2); // afterglow inside him
     }
 
     // it drifts toward him laterally as it climbs, so it lands on his chest
@@ -142,7 +161,9 @@ export class Bestowal {
     this.core.position.set(x, y, z);
     this.core.scale.setScalar(Math.max(0.001, scale));
     this.core.material.opacity = Math.min(1, bright * 0.9);
-    this.core.material.color.copy(COLD).lerp(HOT, Math.min(1, (bright - 1) / 2));
+    this.core.material.color
+      .copy(COLD)
+      .lerp(HOT, Math.min(1, (bright - 1) / 2));
 
     this.halo.position.copy(this.core.position);
     // The halo was scaling past 3 world units - wider than he is - so the orb

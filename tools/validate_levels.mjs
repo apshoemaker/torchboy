@@ -29,11 +29,24 @@ function openableSecrets(g, W, H, entry, at) {
     let progress = false;
     for (const s of S) {
       if (open.has(`${s.x},${s.y}`)) continue;
-      const beside = [[1,0],[-1,0],[0,1],[0,-1]].some(([dx, dy]) => {
-        const nx = s.x + dx, ny = s.y + dy, c = at(nx, ny);
-        return seen[ny]?.[nx] && (!SOLID.has(c) || (c === 'S' && open.has(`${nx},${ny}`)));
+      const beside = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].some(([dx, dy]) => {
+        const nx = s.x + dx,
+          ny = s.y + dy,
+          c = at(nx, ny);
+        return (
+          seen[ny]?.[nx] &&
+          (!SOLID.has(c) || (c === 'S' && open.has(`${nx},${ny}`)))
+        );
       });
-      if (beside) { open.add(`${s.x},${s.y}`); progress = true; }
+      if (beside) {
+        open.add(`${s.x},${s.y}`);
+        progress = true;
+      }
     }
     if (!progress) return { total: S.length, open };
   }
@@ -45,11 +58,22 @@ function reach(g, W, H, entry, at, opened = null) {
   seen[entry.y][entry.x] = true;
   for (let i = 0; i < q.length; i++) {
     const { x, y } = q[i];
-    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-      const nx = x + dx, ny = y + dy, c = at(nx, ny);
-      const passable = !SOLID.has(c) ||
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const nx = x + dx,
+        ny = y + dy,
+        c = at(nx, ny);
+      const passable =
+        !SOLID.has(c) ||
         (c === 'S' && (opened === null || opened.has(`${nx},${ny}`)));
-      if (passable && !seen[ny]?.[nx]) { seen[ny][nx] = true; q.push({ x: nx, y: ny }); }
+      if (passable && !seen[ny]?.[nx]) {
+        seen[ny][nx] = true;
+        q.push({ x: nx, y: ny });
+      }
     }
   }
   return seen;
@@ -57,14 +81,17 @@ function reach(g, W, H, entry, at, opened = null) {
 
 function checkLevel(lv, label) {
   const g = lv.grid.map((r) => r.split(''));
-  const H = g.length, W = g[0].length;
+  const H = g.length,
+    W = g[0].length;
   const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? '#' : g[y][x]);
   const find = (ch) => {
     const o = [];
     g.forEach((r, y) => r.forEach((c, x) => c === ch && o.push({ x, y })));
     return o;
   };
-  const fail = (msg) => { throw new Error(`${label}: ${msg}`); };
+  const fail = (msg) => {
+    throw new Error(`${label}: ${msg}`);
+  };
 
   const entry = [...find('P'), ...find('<')];
   const exit = [...find('>'), ...find('X')];
@@ -74,8 +101,8 @@ function checkLevel(lv, label) {
   const floor = '.FT*P<>X'.split('').reduce((n, c) => n + find(c).length, 0);
   if (floor < 430 || floor > 760) fail(`floor=${floor}, want 430..760`);
 
-  const closed = reach(g, W, H, entry[0], at, new Set());   // no secrets open
-  const open = reach(g, W, H, entry[0], at);                // all secrets open
+  const closed = reach(g, W, H, entry[0], at, new Set()); // no secrets open
+  const open = reach(g, W, H, entry[0], at); // all secrets open
 
   // the way onward must never itself be hidden
   if (!closed[exit[0].y][exit[0].x]) fail('the way onward is behind a secret');
@@ -90,7 +117,8 @@ function checkLevel(lv, label) {
   // at least one reward genuinely behind a secret, and none stranded
   let gated = 0;
   for (const r of [...find('T'), ...find('F')]) {
-    if (!open[r.y][r.x]) fail('a reward is unreachable even with every secret open');
+    if (!open[r.y][r.x])
+      fail('a reward is unreachable even with every secret open');
     if (!closed[r.y][r.x]) gated++;
   }
   if (!gated) fail('no reward is gated behind a secret');
@@ -120,5 +148,7 @@ for (let i = 0; i < RUNS; i++) {
   }
 }
 const ms = Date.now() - t0;
-console.log(`ok  ${RUNS} runs / ${levels} levels, all invariants hold ` +
-            `(${(ms / RUNS).toFixed(1)}ms per run)`);
+console.log(
+  `ok  ${RUNS} runs / ${levels} levels, all invariants hold ` +
+    `(${(ms / RUNS).toFixed(1)}ms per run)`,
+);

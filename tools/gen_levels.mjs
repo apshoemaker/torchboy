@@ -16,12 +16,14 @@
  *         '>' stairs down  '<' stairs up  'F' fuel cache  '*' crystal  'T' treasure
  */
 
-const W = 40, H = 32;
+const W = 40,
+  H = 32;
 
 // ---------------------------------------------------------------- rng
 function mulberry32(a) {
   return function () {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -64,13 +66,21 @@ function regions(g) {
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       if (g[y][x] !== 0 || labels[y][x] !== -1) continue;
-      const id = out.length, cells = [], stack = [[x, y]];
+      const id = out.length,
+        cells = [],
+        stack = [[x, y]];
       labels[y][x] = id;
       while (stack.length) {
         const [cx, cy] = stack.pop();
         cells.push({ x: cx, y: cy });
-        for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-          const nx = cx + dx, ny = cy + dy;
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
+          const nx = cx + dx,
+            ny = cy + dy;
           if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
           if (g[ny][nx] === 0 && labels[ny][nx] === -1) {
             labels[ny][nx] = id;
@@ -88,11 +98,20 @@ function regions(g) {
 function distanceField(g, sources) {
   const d = g.map((r) => r.map(() => Infinity));
   const q = [];
-  for (const s of sources) { d[s.y][s.x] = 0; q.push(s); }
+  for (const s of sources) {
+    d[s.y][s.x] = 0;
+    q.push(s);
+  }
   for (let i = 0; i < q.length; i++) {
     const { x, y } = q[i];
-    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-      const nx = x + dx, ny = y + dy;
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const nx = x + dx,
+        ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
       if (g[ny][nx] === 0 && d[ny][nx] === Infinity) {
         d[ny][nx] = d[y][x] + 1;
@@ -125,19 +144,29 @@ function carveSecretRoom(g, rnd, radius) {
   const { labels, regions: regs } = regions(g);
   if (!regs.length) return null;
   let mainId = 0;
-  regs.forEach((r, i) => { if (r.length > regs[mainId].length) mainId = i; });
+  regs.forEach((r, i) => {
+    if (r.length > regs[mainId].length) mainId = i;
+  });
   const isMain = (x, y) => inB(x, y) && labels[y][x] === mainId;
   const touchesMain = (x, y) =>
-    [[1,0],[-1,0],[0,1],[0,-1]].some(([dx, dy]) => isMain(x + dx, y + dy));
+    [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ].some(([dx, dy]) => isMain(x + dx, y + dy));
 
   // candidate centres: the room disc AND a one-tile buffer ring must be solid
   // rock, so carving cannot break straight through into the open cave.
   const centres = [];
   for (let y = 2; y < H - 2; y++)
     for (let x = 2; x < W - 2; x++)
-      if (disc(x, y, radius + 1).every((c) => inB(c.x, c.y) && g[c.y][c.x] === 1))
+      if (
+        disc(x, y, radius + 1).every((c) => inB(c.x, c.y) && g[c.y][c.x] === 1)
+      )
         centres.push({ x, y });
-  for (let i = centres.length - 1; i > 0; i--) {         // shuffle
+  for (let i = centres.length - 1; i > 0; i--) {
+    // shuffle
     const j = Math.floor(rnd() * (i + 1));
     [centres[i], centres[j]] = [centres[j], centres[i]];
   }
@@ -154,12 +183,21 @@ function carveSecretRoom(g, rnd, radius) {
     let hit = null;
     for (let i = 0; i < q.length && !hit; i++) {
       const { x, y } = q[i];
-      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-        const nx = x + dx, ny = y + dy;
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const nx = x + dx,
+          ny = y + dy;
         if (!inB(nx, ny) || seen.has(key(nx, ny)) || g[ny][nx] !== 1) continue;
         seen.add(key(nx, ny));
         prev.set(key(nx, ny), { x, y });
-        if (touchesMain(nx, ny)) { hit = { x: nx, y: ny }; break; }
+        if (touchesMain(nx, ny)) {
+          hit = { x: nx, y: ny };
+          break;
+        }
         q.push({ x: nx, y: ny });
       }
     }
@@ -168,8 +206,11 @@ function carveSecretRoom(g, rnd, radius) {
     const tunnel = [];
     let cur = prev.get(key(hit.x, hit.y));
     const inRoom = (c) => room.some((r) => r.x === c.x && r.y === c.y);
-    while (cur && !inRoom(cur)) { tunnel.push(cur); cur = prev.get(key(cur.x, cur.y)); }
-    if (tunnel.length > 6) continue;                     // too deep to feel fair
+    while (cur && !inRoom(cur)) {
+      tunnel.push(cur);
+      cur = prev.get(key(cur.x, cur.y));
+    }
+    if (tunnel.length > 6) continue; // too deep to feel fair
 
     // ---- carve, then verify the room really is sealed behind `hit`
     const carved = [...room, ...tunnel];
@@ -178,26 +219,30 @@ function carveSecretRoom(g, rnd, radius) {
     const after = regions(g);
     const roomLabel = after.labels[centre.y][centre.x];
     let mainAfter = 0;
-    after.regions.forEach((r, i) => { if (r.length > after.regions[mainAfter].length) mainAfter = i; });
+    after.regions.forEach((r, i) => {
+      if (r.length > after.regions[mainAfter].length) mainAfter = i;
+    });
     if (roomLabel !== mainAfter && after.regions[roomLabel]) {
-      return { secret: hit, room: after.regions[roomLabel] };  // sealed - keep it
+      return { secret: hit, room: after.regions[roomLabel] }; // sealed - keep it
     }
-    for (const c of carved) g[c.y][c.x] = 1;             // leaked - roll back
+    for (const c of carved) g[c.y][c.x] = 1; // leaked - roll back
   }
   return null;
 }
 
 function buildLevel(seed, opts) {
   const rnd = mulberry32(seed);
-  let g = genCave(rnd, opts.fill, 5);
+  const g = genCave(rnd, opts.fill, 5);
   const { labels, regions: regs } = regions(g);
   if (!regs.length) throw new Error(`seed ${seed}: no open space`);
 
   // main region = biggest; everything else is a pocket candidate
   let mainId = 0;
-  regs.forEach((r, i) => { if (r.length > regs[mainId].length) mainId = i; });
+  regs.forEach((r, i) => {
+    if (r.length > regs[mainId].length) mainId = i;
+  });
 
-  const secrets = [];   // {x,y} wall tiles that become `S`
+  const secrets = []; // {x,y} wall tiles that become `S`
   const secretRooms = []; // pocket cell lists kept as secret rooms
 
   for (let i = 0; i < regs.length; i++) {
@@ -212,8 +257,14 @@ function buildLevel(seed, opts) {
     for (let y = 1; y < H - 1; y++) {
       for (let x = 1; x < W - 1; x++) {
         if (g[y][x] !== 1) continue;
-        let touchPocket = false, touchMain = false;
-        for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        let touchPocket = false,
+          touchMain = false;
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
           const l = labels[y + dy][x + dx];
           if (l === i) touchPocket = true;
           else if (l === mainId) touchMain = true;
@@ -231,8 +282,10 @@ function buildLevel(seed, opts) {
 
   // --- deliberately carve the remaining secrets we still owe the player
   for (let n = secrets.length; n < opts.secrets; n++) {
-    const r = (n === 0 ? [3, 2] : [2, 3])
-      .reduce((acc, rad) => acc || carveSecretRoom(g, rnd, rad), null);
+    const r = (n === 0 ? [3, 2] : [2, 3]).reduce(
+      (acc, rad) => acc || carveSecretRoom(g, rnd, rad),
+      null,
+    );
     if (!r) break;
     secrets.push(r.secret);
     secretRooms.push(r.room);
@@ -242,10 +295,14 @@ function buildLevel(seed, opts) {
   // re-label: carving changed the map, and `main` must include the new tunnels
   const relabel = regions(g);
   let mid = 0;
-  relabel.regions.forEach((r, i) => { if (r.length > relabel.regions[mid].length) mid = i; });
+  relabel.regions.forEach((r, i) => {
+    if (r.length > relabel.regions[mid].length) mid = i;
+  });
   const main = relabel.regions[mid];
   const chars = g.map((r) => r.map((v) => (v === 1 ? '#' : '.')));
-  const place = (c, ch) => { chars[c.y][c.x] = ch; };
+  const place = (c, ch) => {
+    chars[c.y][c.x] = ch;
+  };
 
   const secretCells = new Set(secretRooms.flat().map((c) => c.y * W + c.x));
   const publicCells = main.filter((c) => !secretCells.has(c.y * W + c.x));
@@ -253,10 +310,14 @@ function buildLevel(seed, opts) {
   const dFromSpawn = distanceField(g, [spawn]);
 
   // stairs: the reachable main tile furthest from spawn
-  let far = spawn, farD = -1;
+  let far = spawn,
+    farD = -1;
   for (const c of publicCells) {
     const d = dFromSpawn[c.y][c.x];
-    if (d !== Infinity && d > farD) { farD = d; far = c; }
+    if (d !== Infinity && d > farD) {
+      farD = d;
+      far = c;
+    }
   }
 
   // fuel caches: greedy furthest-point sampling so they are spread out
@@ -264,10 +325,14 @@ function buildLevel(seed, opts) {
   const cand = publicCells.filter((c) => c !== spawn && c !== far);
   let dField = distanceField(g, [spawn, far]);
   for (let n = 0; n < opts.fuel; n++) {
-    let best = null, bestD = -1;
+    let best = null,
+      bestD = -1;
     for (const c of cand) {
       const d = dField[c.y][c.x];
-      if (d !== Infinity && d > bestD && chars[c.y][c.x] === '.') { bestD = d; best = c; }
+      if (d !== Infinity && d > bestD && chars[c.y][c.x] === '.') {
+        bestD = d;
+        best = c;
+      }
     }
     if (!best) break;
     fuel.push(best);
@@ -278,7 +343,9 @@ function buildLevel(seed, opts) {
   // reward inside each secret room: treasure in the largest, fuel elsewhere
   secretRooms.sort((a, b) => b.length - a.length);
   secretRooms.forEach((pocket, idx) => {
-    const open = pocket.filter((c) => g[c.y][c.x] === 0 && chars[c.y][c.x] === '.');
+    const open = pocket.filter(
+      (c) => g[c.y][c.x] === 0 && chars[c.y][c.x] === '.',
+    );
     if (!open.length) return;
     const c = open[Math.floor(open.length / 2)];
     place(c, idx === 0 ? 'T' : 'F');
@@ -312,33 +379,78 @@ function buildLevel(seed, opts) {
 
 // ---------------------------------------------------------------- levels
 const SPEC = [
-  { name: 'The Threshold', seed: 20260906, fill: 0.46, fuel: 4, crystals: 10, secrets: 2,
-    minSecret: 6, maxSecret: 40, entry: 'P', exit: '>', ambient: '#1a2230', fog: 0.055 },
-  { name: 'The Weeping Gallery', seed: 771233, fill: 0.46, fuel: 4, crystals: 12, secrets: 3,
-    minSecret: 6, maxSecret: 40, entry: '<', exit: '>', ambient: '#161d2b', fog: 0.065 },
-  { name: 'The Deep Hollow', seed: 40518, fill: 0.47, fuel: 5, crystals: 14, secrets: 3,
-    minSecret: 5, maxSecret: 40, entry: '<', exit: 'X', ambient: '#120f1c', fog: 0.08 },
+  {
+    name: 'The Threshold',
+    seed: 20260906,
+    fill: 0.46,
+    fuel: 4,
+    crystals: 10,
+    secrets: 2,
+    minSecret: 6,
+    maxSecret: 40,
+    entry: 'P',
+    exit: '>',
+    ambient: '#1a2230',
+    fog: 0.055,
+  },
+  {
+    name: 'The Weeping Gallery',
+    seed: 771233,
+    fill: 0.46,
+    fuel: 4,
+    crystals: 12,
+    secrets: 3,
+    minSecret: 6,
+    maxSecret: 40,
+    entry: '<',
+    exit: '>',
+    ambient: '#161d2b',
+    fog: 0.065,
+  },
+  {
+    name: 'The Deep Hollow',
+    seed: 40518,
+    fill: 0.47,
+    fuel: 5,
+    crystals: 14,
+    secrets: 3,
+    minSecret: 5,
+    maxSecret: 40,
+    entry: '<',
+    exit: 'X',
+    ambient: '#120f1c',
+    fog: 0.08,
+  },
 ];
 
 const levels = SPEC.map((s, i) => {
   const { grid, stats } = buildLevel(s.seed, s);
   console.log(
     `L${i} ${s.name.padEnd(22)} floor=${String(stats.floor).padStart(3)} ` +
-    `secrets=${stats.secrets} rooms=[${stats.secretRooms}] fuel=${stats.fuel} span=${stats.span}`
+      `secrets=${stats.secrets} rooms=[${stats.secretRooms}] fuel=${stats.fuel} span=${stats.span}`,
   );
   return { index: i, name: s.name, ambient: s.ambient, fog: s.fog, grid };
 });
 
 const doc = {
-  tileSize: 2,          // world units per tile
+  tileSize: 2, // world units per tile
   wallHeight: 3.2,
-  levelDrop: 9,         // vertical world offset between levels
+  levelDrop: 9, // vertical world offset between levels
   legend: {
-    ' ': 'void', '#': 'rock', '.': 'floor', 'S': 'secret wall',
-    'P': 'spawn', '<': 'stairs up', '>': 'stairs down',
-    'F': 'fuel cache', '*': 'crystal', 'T': 'secret treasure', 'X': 'the way out',
+    ' ': 'void',
+    '#': 'rock',
+    '.': 'floor',
+    S: 'secret wall',
+    P: 'spawn',
+    '<': 'stairs up',
+    '>': 'stairs down',
+    F: 'fuel cache',
+    '*': 'crystal',
+    T: 'secret treasure',
+    X: 'the way out',
   },
-  width: W, height: H,
+  width: W,
+  height: H,
   levels,
 };
 

@@ -30,16 +30,18 @@ every variable the project reads. Full detail: **[docs/SETUP.md](docs/SETUP.md)*
 | Command | What it does |
 |---|---|
 | `npm run dev` | dev server on :5173, with the story middleware mounted |
-| `npm run check` | **validate the cave generator, then build** — run this before you claim done |
+| `npm run check` | **lint, format-check, validate the cave generator, build** — run this before you claim done |
+| `npm run lint` / `npm run format` | ESLint (correctness) / Prettier (writes) |
 | `npm test` | the generator invariants over 300 runs (~3s) |
 | `npm run build` / `npm run preview` | production build / serve it on :4173 |
 | `npm start` | serve a built `dist/` the way the container does (:8080) |
 | `docker compose up --build` | the container: client + story endpoint (:8080) |
 | `npm run assets` | rebuild `.glb` from Blender sources (needs Blender 5.x) |
 
-There is no linter or formatter in this repo. Match the surrounding style: the
-codebase comments the *why*, not the *what*, and prefers a measured number over
-an adjective.
+ESLint enforces correctness (not style) and Prettier owns formatting; both run
+in `npm run check` and in CI. Beyond what they check, match the surrounding
+style: the codebase comments the *why*, not the *what*, and prefers a measured
+number over an adjective.
 
 ## Validation
 

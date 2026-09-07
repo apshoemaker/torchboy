@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 /**
  * The choir: a physically-modelled vocal tract washed into a distant cloud.
  *
@@ -30,10 +28,15 @@ export class Choir {
       const url = new URL('../audio/vocal-tract-processor.js', import.meta.url);
       await ctx.audioWorklet.addModule(url);
       this.node = new AudioWorkletNode(ctx, 'vocal-tract', {
-        numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1],
+        numberOfInputs: 0,
+        numberOfOutputs: 1,
+        outputChannelCount: [1],
       });
     } catch (e) {
-      console.warn('[choir] vocal tract unavailable, using fallback:', e.message);
+      console.warn(
+        '[choir] vocal tract unavailable, using fallback:',
+        e.message,
+      );
       return false;
     }
 
@@ -68,21 +71,32 @@ export class Choir {
     this.dry.gain.value = 0;
 
     const merge = ctx.createGain();
-    for (const [ms, rate, pan] of [[17, 0.11, -0.7], [26, 0.083, 0.15], [34, 0.067, 0.75]]) {
+    for (const [ms, rate, pan] of [
+      [17, 0.11, -0.7],
+      [26, 0.083, 0.15],
+      [34, 0.067, 0.75],
+    ]) {
       const dl = ctx.createDelay(0.1);
       dl.delayTime.value = ms / 1000;
       const lfo = ctx.createOscillator();
       lfo.frequency.value = rate;
       const amt = ctx.createGain();
-      amt.gain.value = 0.0022;                // ±2.2ms: detune, not vibrato
-      lfo.connect(amt); amt.connect(dl.delayTime); lfo.start();
+      amt.gain.value = 0.0022; // ±2.2ms: detune, not vibrato
+      lfo.connect(amt);
+      amt.connect(dl.delayTime);
+      lfo.start();
       const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
       const g = ctx.createGain();
       g.gain.value = 0.55;
-      spread.connect(dl); dl.connect(g);
-      if (p) { g.connect(p); p.pan.value = pan; p.connect(merge); } else g.connect(merge);
+      spread.connect(dl);
+      dl.connect(g);
+      if (p) {
+        g.connect(p);
+        p.pan.value = pan;
+        p.connect(merge);
+      } else g.connect(merge);
     }
-    spread.connect(merge);                    // a little of the centre, undelayed
+    spread.connect(merge); // a little of the centre, undelayed
 
     merge.connect(this.wet);
     merge.connect(this.dry);
@@ -90,9 +104,9 @@ export class Choir {
     this.dry.connect(dryOut);
 
     this.node.port.postMessage({
-      tenseness: 0.58,      // sung, with a defined glottal pulse
-      aspiration: 0.20,     // breath as a texture, not as the source
-      vowel: 0.30,          // rounded, between "oo" and "oh"
+      tenseness: 0.58, // sung, with a defined glottal pulse
+      aspiration: 0.2, // breath as a texture, not as the source
+      vowel: 0.3, // rounded, between "oo" and "oh"
       level: 0,
     });
     this.ready = true;
@@ -122,8 +136,8 @@ export class Choir {
     // voiced; an ember leaves it breathy and round
     this.node.port.postMessage({
       level: swell,
-      vowel: 0.30 + cold * 0.26,
-      tenseness: 0.58 + cold * 0.10,
+      vowel: 0.3 + cold * 0.26,
+      tenseness: 0.58 + cold * 0.1,
     });
   }
 }

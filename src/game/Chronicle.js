@@ -11,8 +11,8 @@
  */
 export class Chronicle {
   constructor() {
-    this.events = [];        // unconsumed - handed to the next generation
-    this.all = [];           // everything, for the ending
+    this.events = []; // unconsumed - handed to the next generation
+    this.all = []; // everything, for the ending
     this.walked = 0;
     this.sinceFind = 0;
     this.visited = new Set();
@@ -36,19 +36,25 @@ export class Chronicle {
 
   // ------------------------------------------------------------------ hooks
   wakes(levelName, depth, total) {
-    this.note(`he wakes on the ${depth} of ${total} levels down, in ${levelName}`);
+    this.note(
+      `he wakes on the ${depth} of ${total} levels down, in ${levelName}`,
+    );
   }
 
   climbed(levelName, remaining) {
     this.sinceFind = 0;
-    this.note(remaining > 0
-      ? `he climbed up into ${levelName}; ${remaining} more before daylight`
-      : `he climbed into ${levelName}, the last cavern before the surface`);
+    this.note(
+      remaining > 0
+        ? `he climbed up into ${levelName}; ${remaining} more before daylight`
+        : `he climbed into ${levelName}, the last cavern before the surface`,
+    );
   }
 
   openedPassage(total, found) {
     this.sinceFind = 0;
-    this.note(`he found a way sealed in the rock and opened it (${found} of ${total})`);
+    this.note(
+      `he found a way sealed in the rock and opened it (${found} of ${total})`,
+    );
   }
 
   /**
@@ -58,9 +64,11 @@ export class Chronicle {
    */
   exhausted(last) {
     this.sinceFind = 0;
-    this.note(last
-      ? 'he has left nothing here unopened, and the way out of the ground has shown itself'
-      : 'he has left nothing in this cavern unopened, and a way further up has opened for him');
+    this.note(
+      last
+        ? 'he has left nothing here unopened, and the way out of the ground has shown itself'
+        : 'he has left nothing in this cavern unopened, and a way further up has opened for him',
+    );
   }
 
   tookEmber(count) {
@@ -75,10 +83,14 @@ export class Chronicle {
 
   /** He was near something hidden and moved away without finding it. */
   walkedPast() {
-    this.note('his torch went cold near something hidden, and he walked away from it without finding it');
+    this.note(
+      'his torch went cold near something hidden, and he walked away from it without finding it',
+    );
   }
 
-  sawCrystal() { this.note('he passed a seam of pale crystal growing out of the dark'); }
+  sawCrystal() {
+    this.note('he passed a seam of pale crystal growing out of the dark');
+  }
 
   /**
    * Called every frame; turns raw movement into the few observations worth
@@ -90,8 +102,10 @@ export class Chronicle {
       this._lastTile = key;
       if (this.visited.has(key)) this._revisits++;
       else this.visited.add(key);
-      if (this._revisits === 40) this.note('he has begun walking over his own footprints');
-      if (this._revisits === 140) this.note('he is going in circles and has not admitted it yet');
+      if (this._revisits === 40)
+        this.note('he has begun walking over his own footprints');
+      if (this._revisits === 140)
+        this.note('he is going in circles and has not admitted it yet');
     }
     // teased, then left it: only worth saying once in a while
     if (sensing > 0.7) this._teased = 1;
@@ -111,7 +125,9 @@ export class Chronicle {
   }
 
   summary(level, total, found, embers) {
-    return `He is in cavern ${level + 1} of ${total}, has opened ${found} sealed ways, ` +
-      `carries ${embers} embers, and has walked roughly ${Math.round(this.walked)} paces.`;
+    return (
+      `He is in cavern ${level + 1} of ${total}, has opened ${found} sealed ways, ` +
+      `carries ${embers} embers, and has walked roughly ${Math.round(this.walked)} paces.`
+    );
   }
 }

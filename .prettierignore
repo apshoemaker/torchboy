@@ -1,0 +1,9 @@
+# Prose is wrapped by hand and the transcript is 1.4MB of rendered log;
+# reflowing either would be pure churn.
+docs/
+*.md
+
+dist/
+node_modules/
+public/
+package-lock.json

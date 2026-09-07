@@ -26,7 +26,8 @@ export class HUD {
 
   setLevel(name, index, total) {
     this.el.level.textContent = `${index + 1}/${total} · ${name}`;
-    if (this.el.mapLabel) this.el.mapLabel.textContent = `${index + 1}/${total}`;
+    if (this.el.mapLabel)
+      this.el.mapLabel.textContent = `${index + 1}/${total}`;
   }
 
   setFound(found, total) {
@@ -47,7 +48,7 @@ export class HUD {
     this.el.narration.textContent = text;
     this.el.narration.classList.toggle('revelation', kind === 'revelation');
     this.el.narration.classList.add('show');
-    this._narrateT = 7.5 + text.length * 0.035;   // longer lines linger longer
+    this._narrateT = 7.5 + text.length * 0.035; // longer lines linger longer
   }
 
   /** What the dark hands him. Colder, and it holds longer. */
@@ -73,7 +74,9 @@ export class HUD {
     this.el.sound.classList.toggle('off', muted);
   }
 
-  fade(alpha) { this.el.fade.style.opacity = alpha; }
+  fade(alpha) {
+    this.el.fade.style.opacity = alpha;
+  }
 
   /** The ending fades to daylight rather than to black. */
   whiteout(alpha) {
@@ -114,7 +117,9 @@ export class HUD {
     if (this.el.restart) this.el.restart.addEventListener('click', fn);
   }
 
-  ready() { this.el.loading.classList.add('gone'); }
+  ready() {
+    this.el.loading.classList.add('gone');
+  }
 
   progress(p, label) {
     const bar = this.el.loading.querySelector('.bar span');

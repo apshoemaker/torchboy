@@ -36,7 +36,16 @@ function spring(state, target, dt, stiffness, damping) {
 export class Expression {
   constructor(root) {
     this.b = {};
-    for (const n of ['head', 'spine', 'browL', 'browR', 'eyeL', 'eyeR', 'torch', 'armR'])
+    for (const n of [
+      'head',
+      'spine',
+      'browL',
+      'browR',
+      'eyeL',
+      'eyeR',
+      'torch',
+      'armR',
+    ])
       this.b[n] = root.getObjectByName(n);
 
     this.t = 0;
@@ -48,20 +57,20 @@ export class Expression {
     this.headRoll = { v: 0, d: 0 };
 
     this.blinkT = 1.2 + Math.random() * 2.5;
-    this.blink = 0;            // 0 open .. 1 shut
+    this.blink = 0; // 0 open .. 1 shut
     this.blinkQueue = 0;
 
-    this.brow = 0;             // -1 furrowed .. +1 raised
+    this.brow = 0; // -1 furrowed .. +1 raised
     this.browTarget = 0;
     this.eyeWide = 0;
-    this.reaction = 0;         // decays after a discovery
-    this.lookAt = 0;           // -1..1 yaw toward something interesting
+    this.reaction = 0; // decays after a discovery
+    this.lookAt = 0; // -1..1 yaw toward something interesting
   }
 
   /** Fire the "I found it!" beat. */
   react(strength = 1) {
     this.reaction = strength;
-    this.blinkQueue = 0;              // don't blink through the surprise
+    this.blinkQueue = 0; // don't blink through the surprise
     this.blinkT = Math.max(this.blinkT, 0.45);
   }
 
@@ -83,9 +92,10 @@ export class Expression {
     const turnRate = dYaw / Math.max(dt, 1e-4);
 
     // he leads into the turn with his head, then it swings back past centre
-    let yawTarget = THREE.MathUtils.clamp(turnRate * 0.155, -0.50, 0.50);
-    if (lookYaw !== null) yawTarget += THREE.MathUtils.clamp(lookYaw, -0.7, 0.7) * 0.85;
-    spring(this.headYaw, yawTarget, dt, 150, 16);   // under-damped: it overshoots and settles
+    let yawTarget = THREE.MathUtils.clamp(turnRate * 0.155, -0.5, 0.5);
+    if (lookYaw !== null)
+      yawTarget += THREE.MathUtils.clamp(lookYaw, -0.7, 0.7) * 0.85;
+    spring(this.headYaw, yawTarget, dt, 150, 16); // under-damped: it overshoots and settles
 
     // and it pitches back a little when he sets off, like the weight caught up
     const pitchTarget = (moving ? -0.06 : 0) - this.reaction * 0.18;
@@ -103,7 +113,7 @@ export class Expression {
     // ---- blinking ---------------------------------------------------------
     this.blinkT -= dt;
     if (this.blinkT <= 0) {
-      this.blinkQueue = Math.random() < 0.22 ? 2 : 1;   // occasional double
+      this.blinkQueue = Math.random() < 0.22 ? 2 : 1; // occasional double
       // blink more often when alert, less when plodding
       this.blinkT = 1.8 + Math.random() * 4.0 - proximity * 1.0;
     }
@@ -112,7 +122,7 @@ export class Expression {
       this.blinkPhase = 0;
     }
     if (this.blink > 0) {
-      this.blinkPhase = (this.blinkPhase || 0) + dt / 0.13;   // ~130ms per blink
+      this.blinkPhase = (this.blinkPhase || 0) + dt / 0.13; // ~130ms per blink
       this.blink = Math.sin(Math.min(1, this.blinkPhase) * Math.PI);
       if (this.blinkPhase >= 1) {
         this.blink = 0;
@@ -127,24 +137,26 @@ export class Expression {
     const wide = 1 + this.eyeWide * 0.55;
     for (const e of [b.eyeL, b.eyeR]) {
       if (!e) continue;
-      e.scale.set(wide, lid * wide, wide);     // local Y is vertical
+      e.scale.set(wide, lid * wide, wide); // local Y is vertical
     }
 
     // ---- brows ------------------------------------------------------------
     // calm -> level; sensing -> rising and pulling together; found -> shot up
-    this.browTarget = proximity * 0.75 + this.reaction * 1.4 - (moving ? 0.25 : 0);
+    this.browTarget =
+      proximity * 0.75 + this.reaction * 1.4 - (moving ? 0.25 : 0);
     this.brow += (this.browTarget - this.brow) * Math.min(1, dt * 9);
-    const rise = this.brow * 0.020;
-    const pinch = (1 - Math.min(1, Math.abs(this.brow))) * 0.10 + proximity * 0.05;
+    const rise = this.brow * 0.02;
+    const pinch =
+      (1 - Math.min(1, Math.abs(this.brow))) * 0.1 + proximity * 0.05;
     // a slow asymmetric drift so a resting face is never perfectly still
     const drift = Math.sin(this.t * 0.7) * 0.02;
     if (b.browL) {
       b.browL.position.y += rise + drift;
-      addRot(b.browL, _axisZ, pinch - this.reaction * 0.30);
+      addRot(b.browL, _axisZ, pinch - this.reaction * 0.3);
     }
     if (b.browR) {
       b.browR.position.y += rise - drift;
-      addRot(b.browR, _axisZ, -pinch + this.reaction * 0.30);
+      addRot(b.browR, _axisZ, -pinch + this.reaction * 0.3);
     }
 
     // ---- the torch jumps in his hand on a discovery ------------------------

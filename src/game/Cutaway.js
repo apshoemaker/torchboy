@@ -20,7 +20,9 @@ const uniforms = {
   uCutStrength: { value: 1.0 },
 };
 
-export function cutawayUniforms() { return uniforms; }
+export function cutawayUniforms() {
+  return uniforms;
+}
 
 export function applyCutaway(material) {
   if (material.userData.__cutaway) return material;
@@ -32,11 +34,15 @@ export function applyCutaway(material) {
 
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vCutView;')
-      .replace('#include <project_vertex>',
-        '#include <project_vertex>\n  vCutView = mvPosition.xyz;');
+      .replace(
+        '#include <project_vertex>',
+        '#include <project_vertex>\n  vCutView = mvPosition.xyz;',
+      );
 
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>
+      .replace(
+        '#include <common>',
+        `#include <common>
 varying vec3 vCutView;
 uniform vec3 uFocusView;
 uniform float uCutRadius;
@@ -52,8 +58,11 @@ float cutBayer(vec2 p) {
   m[12]=15.0;m[13]=7.0; m[14]=13.0;m[15]=5.0;
   for (int k = 0; k < 16; k++) if (k == i) return (m[k] + 0.5) / 16.0;
   return 0.5;
-}`)
-      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+}`,
+      )
+      .replace(
+        '#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
   // view space: z increases toward the camera, so > means "in front of him"
   // the +0.6 bias stops rock level with the player being chewed away when it
   // was never occluding him in the first place
@@ -63,7 +72,8 @@ float cutBayer(vec2 p) {
     // and read as a field of speckle rather than a soft edge.
     float f = (1.0 - smoothstep(uCutRadius * 0.88, uCutRadius, r)) * uCutStrength;
     if (f > cutBayer(gl_FragCoord.xy)) discard;
-  }`);
+  }`,
+      );
   };
   material.needsUpdate = true;
   return material;

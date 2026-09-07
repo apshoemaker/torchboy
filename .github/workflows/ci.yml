@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# a second push supersedes an in-flight run for the same ref
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint, validate, build (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # package.json declares engines ^20.19.0 || >=22.12.0. Testing both
+        # ends of that range is what makes the claim true rather than asserted;
+        # 22 is also what the container image ships.
+        node: ['20.19', '22', '23']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formatting
+        run: npm run format:check
+
+      # The caves are generated per run, so what is worth testing is the
+      # GENERATOR: roll many and assert the invariants hold on every level of
+      # every one. See docs/adr/0010.
+      - name: Cave generator invariants (300 runs)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # docs/adr/0006: the Anthropic key is server-side only. Nothing that
+      # looks like a credential may ever appear in the client bundle.
+      - name: No credentials in the built client
+        run: |
+          if grep -rlE 'sk-ant-[A-Za-z0-9_-]{20,}|wrkspc_[A-Za-z0-9]{15,}' dist/; then
+            echo "::error::credential-shaped string found in dist/"
+            exit 1
+          fi
+          echo "dist/ is clean"
+
+  container:
+    name: image builds and serves
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # The build stage runs the generator validation itself, so a source tree
+      # that cannot produce a completable cave fails here rather than in front
+      # of a player.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: torchboy:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run it
+        run: docker run -d --name tb -p 8080:8080 torchboy:ci
+
+      - name: Wait for healthy
+        run: |
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' tb 2>/dev/null || echo starting)
+            [ "$status" = healthy ] && echo "healthy after ${i}0s" && exit 0
+            sleep 2
+          done
+          echo "::error::container never became healthy"
+          docker logs tb
+          exit 1
+
+      - name: Smoke test
+        run: |
+          set -e
+          code=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/)
+          [ "$code" = 200 ] || { echo "::error::page returned $code"; exit 1; }
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/models/torchboy.glb)
+          [ "$code" = 200 ] || { echo "::error::model returned $code"; exit 1; }
+
+          # No credentials are configured in CI, so the story endpoint must
+          # degrade to 503 and the game must still serve. Narration is a
+          # flourish and may never be why the game fails to start.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8080/api/story/next \
+            -H 'Content-Type: application/json' -d '{"want":"beat","told":[],"events":[],"summary":"ci"}')
+          [ "$code" = 503 ] || { echo "::error::story endpoint returned $code, expected 503"; exit 1; }
+
+          # path traversal must not escape dist/
+          code=$(curl -s -o /dev/null -w '%{http_code}' --path-as-is 'localhost:8080/../package.json')
+          [ "$code" = 403 ] || [ "$code" = 404 ] || { echo "::error::traversal returned $code"; exit 1; }
+
+          echo "page 200, model 200, story 503, traversal blocked"
+
+      - name: Image contains no credentials and no dev toolchain
+        run: |
+          docker run --rm torchboy:ci sh -c 'test -e /app/.env' && { echo "::error::.env in image"; exit 1; }
+          docker run --rm torchboy:ci sh -c 'ls /app/node_modules | grep -qx vite' && { echo "::error::vite in runtime image"; exit 1; }
+          echo "no .env, no vite"
+
+      - run: docker rm -f tb
+        if: always()

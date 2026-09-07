@@ -7,10 +7,13 @@ import * as THREE from 'three';
  * on the keyboard would not be "up" on screen. basis() exposes that rotation.
  */
 export class IsoCamera {
-  constructor(aspect, { viewSize = 20, azimuth = Math.PI / 4, elevation = 0.66 } = {}) {
+  constructor(
+    aspect,
+    { viewSize = 20, azimuth = Math.PI / 4, elevation = 0.66 } = {},
+  ) {
     this.viewSize = viewSize;
     this.azimuth = azimuth;
-    this.targetAzimuth = azimuth;      // orbit target; the camera eases toward it
+    this.targetAzimuth = azimuth; // orbit target; the camera eases toward it
     this.elevation = elevation;
     // Ortho scale is set by the frustum, but this distance still decides how
     // far every fragment is from the camera - which is what fog reads. Keep it
@@ -26,30 +29,47 @@ export class IsoCamera {
 
   _applyAzimuth() {
     const c = Math.cos(this.elevation);
-    this.offset.set(
-      c * Math.cos(this.azimuth),
-      Math.sin(this.elevation),
-      c * Math.sin(this.azimuth),
-    ).multiplyScalar(this.distance);
+    this.offset
+      .set(
+        c * Math.cos(this.azimuth),
+        Math.sin(this.elevation),
+        c * Math.sin(this.azimuth),
+      )
+      .multiplyScalar(this.distance);
   }
 
   /** Pivot the view around the player. `basis()` reads the offset, so the
    *  movement controls rotate with the camera and stay screen-relative. */
-  orbit(radians) { this.targetAzimuth += radians; }
+  orbit(radians) {
+    this.targetAzimuth += radians;
+  }
 
   resize(aspect) {
-    const h = this.viewSize / 2, w = h * aspect;
+    const h = this.viewSize / 2,
+      w = h * aspect;
     const c = this.camera;
-    c.left = -w; c.right = w; c.top = h; c.bottom = -h;
+    c.left = -w;
+    c.right = w;
+    c.top = h;
+    c.bottom = -h;
     c.updateProjectionMatrix();
   }
 
-  setZoom(viewSize, aspect) { this.viewSize = viewSize; this.resize(aspect); }
+  setZoom(viewSize, aspect) {
+    this.viewSize = viewSize;
+    this.resize(aspect);
+  }
 
   /** Screen-relative movement basis on the XZ plane. */
   basis() {
-    const fwd = new THREE.Vector3(-this.offset.x, 0, -this.offset.z).normalize();
-    const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
+    const fwd = new THREE.Vector3(
+      -this.offset.x,
+      0,
+      -this.offset.z,
+    ).normalize();
+    const right = new THREE.Vector3()
+      .crossVectors(fwd, new THREE.Vector3(0, 1, 0))
+      .normalize();
     return { fwd, right };
   }
 
@@ -61,7 +81,8 @@ export class IsoCamera {
       this.azimuth = this.targetAzimuth;
     } else if (Math.abs(this.targetAzimuth - this.azimuth) > 1e-5) {
       // eased, so a flick of the mouse swings round rather than snapping
-      this.azimuth += (this.targetAzimuth - this.azimuth) * (1 - Math.exp(-11 * dt));
+      this.azimuth +=
+        (this.targetAzimuth - this.azimuth) * (1 - Math.exp(-11 * dt));
     }
     this._applyAzimuth();
     this.current.lerp(this.target, k);

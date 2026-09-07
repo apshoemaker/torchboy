@@ -30,8 +30,8 @@ const EFFORT = process.env.STORY_EFFORT || 'low';
 
 const BEAT_SCHEMA = z.object({ text: z.string() });
 const REVELATION_SCHEMA = z.object({
-  knowledge: z.string(),   // what the dark knows. Not about him.
-  response: z.string(),    // what knowing it does to him, right now.
+  knowledge: z.string(), // what the dark knows. Not about him.
+  response: z.string(), // what knowing it does to him, right now.
 });
 
 const PREMISE =
@@ -100,7 +100,8 @@ async function continueStory(client, body, res) {
   const story = told.length
     ? told.map((t, i) => `${i + 1}. [${t.kind}] ${t.text}`).join('\n')
     : '(nothing yet - this is the opening beat, and everything is open)';
-  const happened = events.length ? events.map((e) => `- ${e}`).join('\n')
+  const happened = events.length
+    ? events.map((e) => `- ${e}`).join('\n')
     : '- he is walking, and nothing in particular has happened';
 
   const wantsRevelation = want === 'revelation';
@@ -114,20 +115,20 @@ async function continueStory(client, body, res) {
       `know. Leave the darkness in his heart unexplained; it is what the rest ` +
       `of the story is for.`
     : wantsRevelation
-    ? `He has just opened a sealed way. Something ancient has entered him.\n\n` +
-      `Write TWO things:\n` +
-      `  knowledge - what he now knows. Cold and formal, older than the miners, ` +
-      `never about him, never in his voice. Under 120 characters. It should ` +
-      `unsettle, and it should fit what the story has already established.\n` +
-      `  response - what knowing it does to him, right now. Present tense, under ` +
-      `120 characters. This must MOVE his story: cost him something, or change ` +
-      `what he thought he was doing down here.`
-    : want === 'ending'
-    ? `This is the END. He has reached the daylight and is walking into it.\n` +
-      `Write the last two or three sentences of his story. Land the arc that has ` +
-      `been building: what he did, what it cost, and what he is walking into. Do ` +
-      `not be consoling if the story has not earned it. Under 320 characters.`
-    : `Write the next beat.`;
+      ? `He has just opened a sealed way. Something ancient has entered him.\n\n` +
+        `Write TWO things:\n` +
+        `  knowledge - what he now knows. Cold and formal, older than the miners, ` +
+        `never about him, never in his voice. Under 120 characters. It should ` +
+        `unsettle, and it should fit what the story has already established.\n` +
+        `  response - what knowing it does to him, right now. Present tense, under ` +
+        `120 characters. This must MOVE his story: cost him something, or change ` +
+        `what he thought he was doing down here.`
+      : want === 'ending'
+        ? `This is the END. He has reached the daylight and is walking into it.\n` +
+          `Write the last two or three sentences of his story. Land the arc that has ` +
+          `been building: what he did, what it cost, and what he is walking into. Do ` +
+          `not be consoling if the story has not earned it. Under 320 characters.`
+        : `Write the next beat.`;
 
   const t0 = Date.now();
   const response = await client.messages.parse({
@@ -135,21 +136,27 @@ async function continueStory(client, body, res) {
     max_tokens: 2000,
     system: SYSTEM,
     output_config: {
-      format: zodOutputFormat(wantsRevelation ? REVELATION_SCHEMA : BEAT_SCHEMA),
-      effort: EFFORT,      // short continuations; low keeps them quick in-play
+      format: zodOutputFormat(
+        wantsRevelation ? REVELATION_SCHEMA : BEAT_SCHEMA,
+      ),
+      effort: EFFORT, // short continuations; low keeps them quick in-play
     },
-    messages: [{
-      role: 'user',
-      content:
-        `THE STORY SO FAR:\n${story}\n\n` +
-        `WHERE HE IS: ${summary}\n\n` +
-        `WHAT JUST HAPPENED:\n${happened}\n\n${ask}`,
-    }],
+    messages: [
+      {
+        role: 'user',
+        content:
+          `THE STORY SO FAR:\n${story}\n\n` +
+          `WHERE HE IS: ${summary}\n\n` +
+          `WHAT JUST HAPPENED:\n${happened}\n\n${ask}`,
+      },
+    ],
   });
 
   const out = response.parsed_output;
   if (!out) throw new Error('no parsed output');
-  res.end(JSON.stringify({ ...out, ms: Date.now() - t0, usage: response.usage }));
+  res.end(
+    JSON.stringify({ ...out, ms: Date.now() - t0, usage: response.usage }),
+  );
 }
 
 /**
@@ -172,18 +179,29 @@ export function createStoryHandler() {
     // a 400 unless the request names a workspace, so pass one through when it
     // is configured. Workspace-scoped keys need nothing here.
     const workspace = process.env.ANTHROPIC_WORKSPACE_ID;
-    client = new Anthropic(workspace
-      ? { defaultHeaders: { 'anthropic-workspace-id': workspace } }
-      : {});
+    client = new Anthropic(
+      workspace
+        ? { defaultHeaders: { 'anthropic-workspace-id': workspace } }
+        : {},
+    );
   } catch (e) {
     clientError = e.message;
   }
 
-  const readBody = (req) => new Promise((resolve) => {
-    let d = '';
-    req.on('data', (c) => { d += c; });
-    req.on('end', () => { try { resolve(JSON.parse(d || '{}')); } catch { resolve({}); } });
-  });
+  const readBody = (req) =>
+    new Promise((resolve) => {
+      let d = '';
+      req.on('data', (c) => {
+        d += c;
+      });
+      req.on('end', () => {
+        try {
+          resolve(JSON.parse(d || '{}'));
+        } catch {
+          resolve({});
+        }
+      });
+    });
 
   const handler = async (req, res, next) => {
     if (!req.url.startsWith('/api/story')) return next();
@@ -191,7 +209,12 @@ export function createStoryHandler() {
 
     if (!client) {
       res.statusCode = 503;
-      res.end(JSON.stringify({ error: 'no Anthropic credentials', detail: clientError }));
+      res.end(
+        JSON.stringify({
+          error: 'no Anthropic credentials',
+          detail: clientError,
+        }),
+      );
       return;
     }
     if (!req.url.startsWith('/api/story/next')) {
@@ -206,18 +229,31 @@ export function createStoryHandler() {
       // Typed SDK errors, most specific first. Note the SDK resolves auth
       // lazily at call time, not in the constructor, so "no credentials
       // configured" surfaces here rather than at startup.
-      let status = 502, label = 'generation failed';
+      let status = 502,
+        label = 'generation failed';
       if (/Could not resolve authentication/i.test(e.message)) {
         status = 503;
-        label = 'no Anthropic credentials - set ANTHROPIC_API_KEY or run `ant auth login`';
+        label =
+          'no Anthropic credentials - set ANTHROPIC_API_KEY or run `ant auth login`';
       } else if (/not scoped to a workspace/i.test(e.message)) {
         status = 400;
-        label = 'org-level key needs a workspace - set ANTHROPIC_WORKSPACE_ID in .env ' +
-                '(Console -> Settings -> Workspaces), or use a workspace-scoped key';
-      } else if (e instanceof Anthropic.AuthenticationError) { status = 401; label = 'bad credentials'; }
-      else if (e instanceof Anthropic.RateLimitError) { status = 429; label = 'rate limited'; }
-      else if (e instanceof Anthropic.APIError) { label = `api error ${e.status}`; }
+        label =
+          'org-level key needs a workspace - set ANTHROPIC_WORKSPACE_ID in .env ' +
+          '(Console -> Settings -> Workspaces), or use a workspace-scoped key';
+      } else if (e instanceof Anthropic.AuthenticationError) {
+        status = 401;
+        label = 'bad credentials';
+      } else if (e instanceof Anthropic.RateLimitError) {
+        status = 429;
+        label = 'rate limited';
+      } else if (e instanceof Anthropic.APIError) {
+        label = `api error ${e.status}`;
+      }
       console.warn(`[story] ${label}: ${e.message}`);
+      // Not a race: `res` is this request's own object and this handler is its
+      // only writer. The rule cannot see that, and flags every Node handler
+      // that assigns to a response after an await.
+      // eslint-disable-next-line require-atomic-updates
       res.statusCode = status;
       res.end(JSON.stringify({ error: label, detail: e.message }));
     }
@@ -231,7 +267,11 @@ export function storyPlugin() {
   const handler = createStoryHandler();
   return {
     name: 'torchboy-story',
-    configureServer(server) { server.middlewares.use(handler); },
-    configurePreviewServer(server) { server.middlewares.use(handler); },
+    configureServer(server) {
+      server.middlewares.use(handler);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(handler);
+    },
   };
 }

@@ -37,7 +37,7 @@ for (const dir of [path.join(HERE, '..'), HERE]) {
     const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
     if (!m) continue;
     const [, k, raw] = m;
-    if (process.env[k] !== undefined) continue;          // env wins
+    if (process.env[k] !== undefined) continue; // env wins
     process.env[k] = raw.trim().replace(/^(['"])(.*)\1$/, '$2');
   }
 }
@@ -51,17 +51,17 @@ if (!fs.existsSync(path.join(ROOT, 'index.html'))) {
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
-  '.js':   'text/javascript; charset=utf-8',
-  '.css':  'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
-  '.svg':  'image/svg+xml',
-  '.png':  'image/png',
-  '.jpg':  'image/jpeg',
-  '.gif':  'image/gif',
-  '.glb':  'model/gltf-binary',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.glb': 'model/gltf-binary',
   '.wasm': 'application/wasm',
   '.woff2': 'font/woff2',
-  '.map':  'application/json; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
 };
 
 const story = createStoryHandler();
@@ -87,12 +87,14 @@ async function serveStatic(req, res) {
   try {
     rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   } catch {
-    res.writeHead(400); return res.end('bad request');
+    res.writeHead(400);
+    return res.end('bad request');
   }
   let file = path.join(ROOT, rel);
   if (rel.endsWith('/')) file = path.join(file, 'index.html');
   if (path.relative(ROOT, file).startsWith('..')) {
-    res.writeHead(403); return res.end('forbidden');
+    res.writeHead(403);
+    return res.end('forbidden');
   }
 
   let stat = await fsp.stat(file).catch(() => null);
@@ -103,7 +105,10 @@ async function serveStatic(req, res) {
   // single-page app: unknown paths fall back to index.html, but never for a
   // request that was clearly for an asset
   if (!stat) {
-    if (path.extname(file)) { res.writeHead(404); return res.end('not found'); }
+    if (path.extname(file)) {
+      res.writeHead(404);
+      return res.end('not found');
+    }
     file = path.join(ROOT, 'index.html');
     stat = await fsp.stat(file);
   }
@@ -111,7 +116,8 @@ async function serveStatic(req, res) {
   const ext = path.extname(file).toLowerCase();
   // Vite fingerprints everything under /assets/, so those are immutable.
   // index.html must never be cached or a deploy does not take effect.
-  const immutable = rel.startsWith('/assets/') && /-[A-Za-z0-9_-]{8,}\./.test(rel);
+  const immutable =
+    rel.startsWith('/assets/') && /-[A-Za-z0-9_-]{8,}\./.test(rel);
   res.writeHead(200, {
     'Content-Type': TYPES[ext] || 'application/octet-stream',
     'Content-Length': stat.size,
@@ -125,11 +131,15 @@ async function serveStatic(req, res) {
 }
 
 server.listen(PORT, HOST, () => {
-  const hasKey = !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+  const hasKey = !!(
+    process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN
+  );
   console.log(`torchboy on http://${HOST}:${PORT}`);
-  console.log(hasKey
-    ? '  story: credentials present'
-    : '  story: no credentials - the game will use its written fallback beats');
+  console.log(
+    hasKey
+      ? '  story: credentials present'
+      : '  story: no credentials - the game will use its written fallback beats',
+  );
 });
 
 for (const sig of ['SIGTERM', 'SIGINT']) {

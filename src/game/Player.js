@@ -25,7 +25,7 @@ const RADIUS = 0.42;
  */
 const STRIDE_PER_CYCLE = 0.954;
 const FOOT_LOCK = 1.0;
-const CADENCE_CAP = 3.6;        // ceiling on playback rate, so it never blurs
+const CADENCE_CAP = 3.6; // ceiling on playback rate, so it never blurs
 
 export class Player {
   constructor(gltf, grid) {
@@ -39,8 +39,11 @@ export class Player {
       //             cube map at that range, which painted a hard pale wedge
       //             across his face
       // A contact shadow grounds him instead.
-      if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; }
-      if (o.isSkinnedMesh) o.frustumCulled = false;   // skinned bounds go stale
+      if (o.isMesh) {
+        o.castShadow = false;
+        o.receiveShadow = false;
+      }
+      if (o.isSkinnedMesh) o.frustumCulled = false; // skinned bounds go stale
     });
 
     this.blob = Player.contactShadow();
@@ -56,7 +59,9 @@ export class Player {
 
     this.state = null;
     this.play('Idle', 0);
-    this.mixer.addEventListener('finished', () => { this.busy = false; });
+    this.mixer.addEventListener('finished', () => {
+      this.busy = false;
+    });
 
     this.flame = this.root.getObjectByName('flame');
     this.expr = new Expression(this.root);
@@ -83,11 +88,16 @@ export class Player {
     const mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(1.15, 1.15),
       new THREE.MeshBasicMaterial({
-        map: tex, transparent: true, opacity: 0.5, depthWrite: false,
+        map: tex,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
         // MultiplyBlending in three requires premultiplied alpha, or it warns
         // once per frame for the life of the session
-        blending: THREE.MultiplyBlending, premultipliedAlpha: true,
-      }));
+        blending: THREE.MultiplyBlending,
+        premultipliedAlpha: true,
+      }),
+    );
     mesh.rotation.x = -Math.PI / 2;
     mesh.renderOrder = 2;
     return mesh;
@@ -125,7 +135,8 @@ export class Player {
    *   lookYaw is the yaw offset toward whatever he can sense, in radians.
    */
   update(dt, axis, basis, revealed, mood = {}) {
-    let dx = 0, dz = 0;
+    let dx = 0,
+      dz = 0;
     if (!this.busy) {
       dx = basis.right.x * axis.x + basis.fwd.x * axis.y;
       dz = basis.right.z * axis.x + basis.fwd.z * axis.y;
@@ -136,9 +147,19 @@ export class Player {
     if (this.moving) {
       dx = (dx / len) * SPEED * dt;
       dz = (dz / len) * SPEED * dt;
-      const beforeX = this.pos.x, beforeZ = this.pos.z;
-      const r = this.grid.moveCircle(this.level, this.pos.x, this.pos.z, dx, dz, RADIUS, revealed);
-      this.pos.x = r.x; this.pos.z = r.z;
+      const beforeX = this.pos.x,
+        beforeZ = this.pos.z;
+      const r = this.grid.moveCircle(
+        this.level,
+        this.pos.x,
+        this.pos.z,
+        dx,
+        dz,
+        RADIUS,
+        revealed,
+      );
+      this.pos.x = r.x;
+      this.pos.z = r.z;
       // measure what he ACTUALLY covered, not what he asked for - scraping
       // along a wall should slow his legs too
       const moved = Math.hypot(this.pos.x - beforeX, this.pos.z - beforeZ);
@@ -156,7 +177,8 @@ export class Player {
     this.root.rotation.y = this.facing;
     this.blob.position.set(this.pos.x, this.pos.y + 0.03, this.pos.z);
 
-    if (!this.moving) this.groundSpeed += (0 - this.groundSpeed) * Math.min(1, dt * 12);
+    if (!this.moving)
+      this.groundSpeed += (0 - this.groundSpeed) * Math.min(1, dt * 12);
 
     if (!this.busy) this.play(this.moving ? 'Walk' : 'Idle');
 
@@ -164,7 +186,8 @@ export class Player {
     const walk = this.actions.Walk;
     if (walk) {
       const cycle = walk.getClip().duration;
-      const locked = (this.groundSpeed * cycle / STRIDE_PER_CYCLE) * FOOT_LOCK;
+      const locked =
+        ((this.groundSpeed * cycle) / STRIDE_PER_CYCLE) * FOOT_LOCK;
       walk.timeScale = THREE.MathUtils.clamp(locked, 0.55, CADENCE_CAP);
     }
     this.mixer.update(dt);
@@ -180,5 +203,7 @@ export class Player {
   }
 
   /** Play the "found it" beat on the face. */
-  react(strength) { this.expr.react(strength); }
+  react(strength) {
+    this.expr.react(strength);
+  }
 }

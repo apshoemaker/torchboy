@@ -15,13 +15,20 @@ import { Minimap } from './game/Minimap.js';
 import { generateLevels } from './game/LevelGen.js';
 import { Ascension } from './game/Ascension.js';
 import { Chronicle } from './game/Chronicle.js';
-import { updateCutaway, setCutawayActive, cutawayUniforms } from './game/Cutaway.js';
-
+import {
+  updateCutaway,
+  setCutawayActive,
+  cutawayUniforms,
+} from './game/Cutaway.js';
 
 const canvas = document.getElementById('view');
 // preserveDrawingBuffer: true here lets tooling read pixels back to measure
 // exposure/clipping. It costs performance, so it stays off outside tuning.
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  powerPreference: 'high-performance',
+});
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
@@ -47,7 +54,10 @@ const _chest = new THREE.Vector3();
 // the player's first input rather than trying (and failing) at load.
 const wakeAudio = () => {
   ambience.start().then(() => {
-    if (ambience.ready) { ambience.setLevel(game.level); hud.setMuted(ambience.muted); }
+    if (ambience.ready) {
+      ambience.setLevel(game.level);
+      hud.setMuted(ambience.muted);
+    }
   });
   removeEventListener('keydown', wakeAudio);
   removeEventListener('pointerdown', wakeAudio);
@@ -55,11 +65,11 @@ const wakeAudio = () => {
 addEventListener('keydown', wakeAudio);
 addEventListener('pointerdown', wakeAudio);
 addEventListener('keydown', (e) => {
-  if (e.code === 'KeyM') hud.setMuted(!ambience.toggle());   // toggle() -> now audible
+  if (e.code === 'KeyM') hud.setMuted(!ambience.toggle()); // toggle() -> now audible
 });
 
 // a barely-there cool ambient: enough to read silhouettes, not enough to explore by
-const ambient = new THREE.HemisphereLight(0x25334d, 0x07070c, 0.30);
+const ambient = new THREE.HemisphereLight(0x25334d, 0x07070c, 0.3);
 scene.add(ambient);
 
 // A dim fill on the camera side of the player. His torch is at his own hand,
@@ -72,13 +82,22 @@ scene.add(fill);
 const fillDir = new THREE.Vector3();
 
 const game = {
-  level: 0, found: 0, totalSecrets: 0, treasures: 0,
-  stairLock: false, transition: 0, won: false, ended: false, t: 0, blockedHint: '',
+  level: 0,
+  found: 0,
+  totalSecrets: 0,
+  treasures: 0,
+  stairLock: false,
+  transition: 0,
+  won: false,
+  ended: false,
+  t: 0,
+  blockedHint: '',
 };
 
 // ------------------------------------------------------------------ loading
 const loader = new GLTFLoader();
-const load = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+const load = (url) =>
+  new Promise((res, rej) => loader.load(url, res, undefined, rej));
 
 async function boot() {
   hud.progress(0.08, 'carving the cavern');
@@ -123,11 +142,33 @@ async function boot() {
   hud.onRestart(() => window.location.reload());
   hud.toast('Your torch stirs near hidden ways. Climb.', 4.5);
 
-  Object.assign(window, { __game: { scene, renderer, cam, grid, cavern, player, props, torch, game, ambience, narrator, chronicle, bestow,
-    get ascension() { return ascension; },
-    get minimap() { return minimap; },
-    get bestowal() { return bestowal; },
-    cutaway: cutawayUniforms() } });
+  Object.assign(window, {
+    __game: {
+      scene,
+      renderer,
+      cam,
+      grid,
+      cavern,
+      player,
+      props,
+      torch,
+      game,
+      ambience,
+      narrator,
+      chronicle,
+      bestow,
+      get ascension() {
+        return ascension;
+      },
+      get minimap() {
+        return minimap;
+      },
+      get bestowal() {
+        return bestowal;
+      },
+      cutaway: cutawayUniforms(),
+    },
+  });
   loop(grid, cavern, props, player, torch);
 }
 
@@ -142,18 +183,18 @@ function enterLevel(i, grid, cavern, props, player, torch, snap) {
   // fixed distance, so exponential fog applies one flat tint to everything.
   // Keying near/far to the camera distance turns it back into a depth cue.
   const d = cam.distance;
-  const reach = 46 - lv.fog * 380;          // denser levels close in sooner
+  const reach = 46 - lv.fog * 380; // denser levels close in sooner
   // fog toward near-black, not toward the ambient tint: a light fog colour
   // silhouettes every distant wall top and the cave starts reading as a
   // mountain range instead of somewhere underground
-  const fogCol = new THREE.Color(lv.ambient).multiplyScalar(0.30);
+  const fogCol = new THREE.Color(lv.ambient).multiplyScalar(0.3);
   scene.fog = new THREE.Fog(fogCol, d - 16, d + reach);
   scene.background = fogCol;
   hud.setLevel(lv.name, i, grid.levels.length);
   ambience.setLevel(i);
   if (i > 0) {
     chronicle.climbed(lv.name, grid.levels.length - 1 - i);
-    pendingBestow = 0.9;               // let the level settle, then bestow
+    pendingBestow = 0.9; // let the level settle, then bestow
   }
   // per-LEVEL, not the global tally: this number is now the thing standing
   // between him and the way up, so it has to say what he still owes on THIS
@@ -177,51 +218,75 @@ function loop(grid, cavern, props, player, torch) {
     const hidden = cavern.nearestHidden(game.level, player.pos.x, player.pos.z);
     torch.sense(hidden.distance);
     // he only turns his head toward it once the flame is actually stirring
-    const lookYaw = (hidden.yaw !== null && torch.proximity > 0.12)
-      ? angleDelta(hidden.yaw, player.facing) * torch.proximity
-      : null;
+    const lookYaw =
+      hidden.yaw !== null && torch.proximity > 0.12
+        ? angleDelta(hidden.yaw, player.facing) * torch.proximity
+        : null;
 
-    player.update(dt, busy ? { x: 0, y: 0 } : input.axis(), cam.basis(), cavern.revealed,
-                  { proximity: torch.proximity, lookYaw });
+    player.update(
+      dt,
+      busy ? { x: 0, y: 0 } : input.axis(),
+      cam.basis(),
+      cavern.revealed,
+      { proximity: torch.proximity, lookYaw },
+    );
     torch.update(dt);
     // pivot before following, so the camera and the movement basis agree this frame
     cam.orbit(input.takeOrbit() + input.orbitRate() * dt);
     cam.follow(player.pos, dt);
     cam.camera.updateMatrixWorld();
     fillDir.copy(cam.offset).normalize();
-    fill.position.copy(player.pos)
+    fill.position
+      .copy(player.pos)
       .addScaledVector(fillDir, 1.25)
       .add(new THREE.Vector3(0, 0.85, 0));
-    updateCutaway(cam.camera, player.pos, 0.75);   // aim at his torso, not his feet
+    updateCutaway(cam.camera, player.pos, 0.75); // aim at his torso, not his feet
     // Only dissolve rock when it is genuinely hiding him. Standing beside a
     // wall put geometry nearer the camera than him and used to punch a hole in
     // it for no reason, which read as the torchlight leaking through the rock.
-    const camDir = cam.basis().fwd;                // points camera -> player
+    const camDir = cam.basis().fwd; // points camera -> player
     setCutawayActive(
-      grid.viewBlocked(game.level, player.pos.x, player.pos.z,
-                       -camDir.x, -camDir.z, Math.tan(cam.elevation),
-                       player.pos.y + 1.15, cavern.revealed),
-      dt);
+      grid.viewBlocked(
+        game.level,
+        player.pos.x,
+        player.pos.z,
+        -camDir.x,
+        -camDir.z,
+        Math.tan(cam.elevation),
+        player.pos.y + 1.15,
+        cavern.revealed,
+      ),
+      dt,
+    );
 
-    const found = cavern.checkReveals(game.level, player.pos.x, player.pos.z, torch.revealRadius);
+    const found = cavern.checkReveals(
+      game.level,
+      player.pos.x,
+      player.pos.z,
+      torch.revealRadius,
+    );
     if (found) {
       game.found += found;
       const c = cavern.countOn(game.level);
       hud.setFound(c.found, c.total);
       chronicle.openedPassage(game.totalSecrets, game.found);
-      player.react(1);                       // brows up, eyes wide, torch jumps
+      player.react(1); // brows up, eyes wide, torch jumps
       ambience.discovery();
-      bestow(player);                        // something comes up out of the floor
+      bestow(player); // something comes up out of the floor
       // The last passage on a level is what opens the way up. Wait for the
       // knowledge to finish entering him before the stairs rise, so the two
       // read as cause and effect rather than as two things happening at once.
       if (c.complete && props.isSealed(game.level)) {
-        hud.toast(found > 1 ? `${found} passages open!` : 'The last passage opens...');
+        hud.toast(
+          found > 1 ? `${found} passages open!` : 'The last passage opens...',
+        );
         pendingUnseal = 2.4;
       } else {
         const left = c.total - c.found;
-        hud.toast(`${found > 1 ? `${found} passages open` : 'A passage opens'} — ` +
-                  `${left} still hidden here`);
+        hud.toast(
+          `${found > 1 ? `${found} passages open` : 'A passage opens'} — ` +
+            `${left} still hidden here`,
+        );
       }
     }
     cavern.update(dt);
@@ -231,12 +296,17 @@ function loop(grid, cavern, props, player, torch) {
 
     // the choir hears passages AND uncollected treasure; the flame only ever
     // hears passages, so the hot/cold hunt stays unambiguous
-    const wonder = Math.max(torch.proximity, props.wonder(game.level, player.pos.x, player.pos.z));
+    const wonder = Math.max(
+      torch.proximity,
+      props.wonder(game.level, player.pos.x, player.pos.z),
+    );
     ambience.update(dt, torch.proximity, wonder);
     hud.setSense(torch.proximity, torch.embers);
-    hud.hint(game.blockedHint ||
-             (torch.proximity > 0.72 && !game.won ? 'something gives here' : ''));
-    game.blockedHint = '';       // set again next frame if he is still standing there
+    hud.hint(
+      game.blockedHint ||
+        (torch.proximity > 0.72 && !game.won ? 'something gives here' : ''),
+    );
+    game.blockedHint = ''; // set again next frame if he is still standing there
     // a descent queues one, so it lands after the fade rather than under it
     if (pendingBestow > 0) {
       pendingBestow -= dt;
@@ -276,11 +346,26 @@ function loop(grid, cavern, props, player, torch) {
         if (known) hud.revelation(known);
       }
     }
-    if (minimap) minimap.update(dt, game.level, player.pos, player.facing, cavern, props);
-    chronicle.update(dt, game.level, grid.worldToTile(player.pos.x, player.pos.z),
-                     torch.proximity, cavern);
-    narrator.update(dt, player.pos, busy,
-      chronicle.summary(game.level, grid.levels.length, game.found, torch.embers));
+    if (minimap)
+      minimap.update(dt, game.level, player.pos, player.facing, cavern, props);
+    chronicle.update(
+      dt,
+      game.level,
+      grid.worldToTile(player.pos.x, player.pos.z),
+      torch.proximity,
+      cavern,
+    );
+    narrator.update(
+      dt,
+      player.pos,
+      busy,
+      chronicle.summary(
+        game.level,
+        grid.levels.length,
+        game.found,
+        torch.embers,
+      ),
+    );
     hud.update(dt);
     if (game.transition > 0) {
       game.transition = Math.max(0, game.transition - dt);
@@ -303,7 +388,9 @@ function interact(grid, cavern, props, player, torch) {
       player.react(0.55);
       ambience.pickup();
       chronicle.tookEmber(torch.embers);
-      hud.toast(`Ember taken - you can feel further now (${torch.revealRadius.toFixed(1)}m)`);
+      hud.toast(
+        `Ember taken - you can feel further now (${torch.revealRadius.toFixed(1)}m)`,
+      );
     } else if (item.spec.kind === 'treasure') {
       props.take(item);
       game.treasures++;
@@ -318,7 +405,12 @@ function interact(grid, cavern, props, player, torch) {
   // props.nearest only returns what is visible, so a sealed way out cannot be
   // walked into - but be explicit, because this one ends the game
   const exit = props.nearest(game.level, x, z, 2.2);
-  if (exit && exit.spec.kind === 'exit' && !game.won && !props.isSealed(game.level)) {
+  if (
+    exit &&
+    exit.spec.kind === 'exit' &&
+    !game.won &&
+    !props.isSealed(game.level)
+  ) {
     game.won = true;
     hud.toast('', 0.01);
     ascension.start(player, exit.mesh.position);
@@ -337,10 +429,18 @@ function interact(grid, cavern, props, player, torch) {
       // stash rather than set: the loop writes hud.hint after interact() runs
       game.blockedHint = `the way is shut — ${n} passage${n === 1 ? '' : 's'} still hidden here`;
     }
-    if (near && !game.stairLock && !props.isSealed(game.level) &&
-        game.level + 1 < grid.levels.length) {
+    if (
+      near &&
+      !game.stairLock &&
+      !props.isSealed(game.level) &&
+      game.level + 1 < grid.levels.length
+    ) {
       game.transition = 0.55;
-      setTimeout(() => enterLevel(game.level + 1, grid, cavern, props, player, torch, true), 260);
+      setTimeout(
+        () =>
+          enterLevel(game.level + 1, grid, cavern, props, player, torch, true),
+        260,
+      );
       return;
     }
     if (!near) game.stairLock = false;
@@ -373,14 +473,17 @@ function openTheWayOn(grid, props, player) {
   const it = props.unseal(game.level);
   if (!it) return;
   const last = game.level + 1 >= grid.levels.length;
-  hud.toast(last
-    ? 'Nothing is hidden here now. The way out stands open.'
-    : 'Nothing is hidden here now. A way up opens.', 5);
+  hud.toast(
+    last
+      ? 'Nothing is hidden here now. The way out stands open.'
+      : 'Nothing is hidden here now. A way up opens.',
+    5,
+  );
   ambience.discovery();
   player.react(1);
-  chronicle.exhausted(last);              // the story should know he finished a cavern
+  chronicle.exhausted(last); // the story should know he finished a cavern
   narrator.reveal();
-  if (minimap) minimap.dirty = true;      // the marker was being withheld
+  if (minimap) minimap.dirty = true; // the marker was being withheld
 }
 
 /** Shortest signed angle from b to a, in (-PI, PI]. */

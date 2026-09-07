@@ -78,6 +78,19 @@ The converse is also enforced: `three` is a **build** dependency. It is bundled
 into `dist/` by Vite and never imported at runtime, and leaving it in
 `dependencies` put 32MB of it into the runtime image for nothing.
 
+## CI
+
+`.github/workflows/ci.yml` runs two jobs on every push and pull request:
+
+- **check** — lint, format-check, 300 generator runs, build, and a grep asserting
+  no credential-shaped string reached `dist/`. Run across Node 20.19, 22 and 23,
+  which is what makes the `engines` range in `package.json` a tested claim rather
+  than an assertion.
+- **container** — builds this image, runs it, waits for the `HEALTHCHECK` to go
+  healthy, then asserts the page serves, a model serves, the story endpoint
+  degrades to `503` with no credentials, path traversal is refused, and the image
+  contains neither `.env` nor Vite.
+
 ## Local run without Docker
 
 ```bash

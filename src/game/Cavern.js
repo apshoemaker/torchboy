@@ -15,21 +15,32 @@ export class Cavern {
     this.grid = grid;
     this.root = new THREE.Group();
     this.levels = [];
-    this.secrets = new Map();      // "level:tx,ty" -> {mesh, level, tx, ty, t}
+    this.secrets = new Map(); // "level:tx,ty" -> {mesh, level, tx, ty, t}
     this.revealed = new Set();
     this.revealing = [];
     this.mats = cavernMaterials();
     this.tris = 0;
 
     for (const lv of grid.levels) {
-      const { group, secrets, tris } = buildCavernLevel(grid, lv.index, this.mats);
+      const { group, secrets, tris } = buildCavernLevel(
+        grid,
+        lv.index,
+        this.mats,
+      );
       this.levels[lv.index] = group;
       this.root.add(group);
       this.tris += tris;
       for (const [key, mesh] of secrets) {
         const [, coords] = key.split(':');
         const [tx, ty] = coords.split(',').map(Number);
-        this.secrets.set(key, { mesh, level: lv.index, tx, ty, t: 0, done: false });
+        this.secrets.set(key, {
+          mesh,
+          level: lv.index,
+          tx,
+          ty,
+          t: 0,
+          done: false,
+        });
       }
     }
 
@@ -64,7 +75,8 @@ export class Cavern {
    * and not just a statistic.
    */
   countOn(level) {
-    let total = 0, found = 0;
+    let total = 0,
+      found = 0;
     for (const s of this.secrets.values()) {
       if (s.level !== level) continue;
       total++;
@@ -79,14 +91,23 @@ export class Cavern {
    * torch is sensing, which reads far better than a HUD number.
    */
   nearestHidden(level, x, z) {
-    let best = Infinity, bx = 0, bz = 0;
+    let best = Infinity,
+      bx = 0,
+      bz = 0;
     for (const s of this.secrets.values()) {
       if (s.done || s.level !== level) continue;
       const w = this.grid.tileToWorld(level, s.tx, s.ty);
       const d = Math.hypot(w.x - x, w.z - z);
-      if (d < best) { best = d; bx = w.x - x; bz = w.z - z; }
+      if (d < best) {
+        best = d;
+        bx = w.x - x;
+        bz = w.z - z;
+      }
     }
-    return { distance: best, yaw: best === Infinity ? null : Math.atan2(bx, bz) };
+    return {
+      distance: best,
+      yaw: best === Infinity ? null : Math.atan2(bx, bz),
+    };
   }
 
   /** Reveal any secret within `radius` of the player. @returns {number} newly found */
@@ -118,7 +139,7 @@ export class Cavern {
       mat.emissiveIntensity = Math.sin(Math.min(1, s.t) * Math.PI) * 1.6;
       mat.opacity = 1 - Math.min(1, s.t);
       const k = Math.min(1, s.t);
-      s.mesh.position.y = -(k * k) * 1.2;   // sinks as it crumbles
+      s.mesh.position.y = -(k * k) * 1.2; // sinks as it crumbles
       if (s.t >= 1) {
         s.mesh.visible = false;
         this.revealing.splice(i, 1);

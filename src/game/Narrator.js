@@ -30,22 +30,35 @@ const FALLBACK = [
   'Somewhere above, the dark thinned. He climbed toward it because it was the only direction left.',
 ];
 const FALLBACK_REV = [
-  { knowledge: 'The stone remembers weight better than it remembers the ones who carried it.',
-    response: 'He thinks of how little he weighs, and is not comforted.' },
-  { knowledge: 'Every way sealed down here was sealed from the inside.',
-    response: 'He looks at his own hands, and does not finish the thought.' },
-  { knowledge: 'To seal a door you must first convince yourself there was never a door.',
-    response: 'He has been telling himself something since he got here. He stops.' },
-  { knowledge: 'The dark is not empty. It is occupied, and it has been patient.',
-    response: 'He wants the light more than he did an hour ago, and likes himself less for it.' },
+  {
+    knowledge:
+      'The stone remembers weight better than it remembers the ones who carried it.',
+    response: 'He thinks of how little he weighs, and is not comforted.',
+  },
+  {
+    knowledge: 'Every way sealed down here was sealed from the inside.',
+    response: 'He looks at his own hands, and does not finish the thought.',
+  },
+  {
+    knowledge:
+      'To seal a door you must first convince yourself there was never a door.',
+    response:
+      'He has been telling himself something since he got here. He stops.',
+  },
+  {
+    knowledge:
+      'The dark is not empty. It is occupied, and it has been patient.',
+    response:
+      'He wants the light more than he did an hour ago, and likes himself less for it.',
+  },
 ];
 
 export class Narrator {
   constructor(hud, chronicle) {
     this.hud = hud;
     this.chronicle = chronicle;
-    this.told = [];               // everything shown, in order - the memory
-    this.live = false;            // is the model actually answering?
+    this.told = []; // everything shown, in order - the memory
+    this.live = false; // is the model actually answering?
     this.ready = false;
     this.title = 'Torchboy';
 
@@ -75,7 +88,10 @@ export class Narrator {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    if (!res.ok)
+      throw new Error(
+        (await res.json().catch(() => ({}))).error || res.statusText,
+      );
     return res.json();
   }
 
@@ -92,9 +108,10 @@ export class Narrator {
       this.inFlight[want] = true;
       this._ask(want)
         .then((d) => {
-          this.pending[want] = want === 'revelation'
-            ? { knowledge: d.knowledge, response: d.response }
-            : d.text;
+          this.pending[want] =
+            want === 'revelation'
+              ? { knowledge: d.knowledge, response: d.response }
+              : d.text;
           this.live = true;
           this.ready = true;
         })
@@ -103,7 +120,9 @@ export class Narrator {
           this.live = false;
           this.ready = true;
         })
-        .finally(() => { this.inFlight[want] = false; });
+        .finally(() => {
+          this.inFlight[want] = false;
+        });
     }
   }
 
@@ -127,7 +146,10 @@ export class Narrator {
   reveal(force = false) {
     if (!force && this.t < this.holdUntil) return false;
     const text = this._takeBeat();
-    if (!text) { this.prefetch(); return false; }
+    if (!text) {
+      this.prefetch();
+      return false;
+    }
     this.hud.narrate(text);
     this.told.push({ kind: 'beat', text });
     this.holdUntil = this.t + 9;
@@ -141,8 +163,12 @@ export class Narrator {
   nextRevelation() {
     let r = this.pending.revelation;
     if (r) this.pending.revelation = null;
-    else if (this.fallbackRevAt < FALLBACK_REV.length) r = FALLBACK_REV[this.fallbackRevAt++];
-    if (!r) { this.prefetch(); return null; }
+    else if (this.fallbackRevAt < FALLBACK_REV.length)
+      r = FALLBACK_REV[this.fallbackRevAt++];
+    if (!r) {
+      this.prefetch();
+      return null;
+    }
 
     this.told.push({ kind: 'revelation', text: r.knowledge });
     if (r.response) {
@@ -162,8 +188,10 @@ export class Narrator {
       this.told.push({ kind: 'ending', text: d.text });
     } catch {
       const last = this.told.filter((t) => t.kind === 'beat').pop();
-      this.hud.ending(this.title,
-        last ? last.text : 'He walked into the light, and did not look back.');
+      this.hud.ending(
+        this.title,
+        last ? last.text : 'He walked into the light, and did not look back.',
+      );
     }
   }
 

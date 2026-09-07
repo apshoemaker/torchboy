@@ -16,8 +16,19 @@ npm test             # the generator invariants over 300 runs (~3s)
 npm run levels       # the same, 150 runs
 ```
 
-There is **no linter or formatter**. Match the surrounding style: comments
+```bash
+npm run lint         # ESLint: correctness rules, not style
+npm run format       # Prettier: writes
+npm run format:check # Prettier: verifies, as CI does
+```
+
+`npm run check` runs lint → format-check → generator invariants → build, which
+is exactly what CI runs. Beyond that, match the surrounding style: comments
 explain *why*, not *what*, and a measured number beats an adjective.
+
+**Why ESLint is configured for correctness only.** Style rules and Prettier
+would fight each other, and this codebase makes deliberate formatting choices
+Prettier cannot express — see `eslint.config.mjs`.
 
 ## The standing rule: measure, don't eyeball
 

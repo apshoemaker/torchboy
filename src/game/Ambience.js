@@ -21,7 +21,7 @@
 const SCALE = [0, 2, 3, 5, 7, 10];
 
 // One root per level, descending. Going deeper literally lowers the music.
-const ROOTS = [55.00, 48.99, 43.65];      // A1, G1, F1
+const ROOTS = [55.0, 48.99, 43.65]; // A1, G1, F1
 
 import { Choir } from './Choir.js';
 
@@ -45,7 +45,7 @@ function makeImpulse(ctx, seconds, decay) {
     let lp = 0;
     for (let i = 0; i < len; i++) {
       const t = i / len;
-      lp += ((Math.random() * 2 - 1) - lp) * 0.22;
+      lp += (Math.random() * 2 - 1 - lp) * 0.22;
       d[i] = lp * Math.pow(1 - t, decay);
     }
     let max = 0;
@@ -67,7 +67,7 @@ function makeNoise(ctx, seconds) {
   const tmp = new Float32Array(len + fade);
   let last = 0;
   for (let i = 0; i < tmp.length; i++) {
-    last = (last + (Math.random() * 2 - 1) * 0.02) * 0.995;   // brown-ish: dark, not hissy
+    last = (last + (Math.random() * 2 - 1) * 0.02) * 0.995; // brown-ish: dark, not hissy
     tmp[i] = last;
   }
 
@@ -84,7 +84,6 @@ function makeNoise(ctx, seconds) {
   if (max > 0) for (let i = 0; i < len; i++) d[i] /= max;
   return buf;
 }
-
 
 export class Ambience {
   constructor() {
@@ -108,8 +107,11 @@ export class Ambience {
     if (this.ctx || this.failed) return;
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) { this.failed = true; return; }
-      const ctx = this.ctx = new AC();
+      if (!AC) {
+        this.failed = true;
+        return;
+      }
+      const ctx = (this.ctx = new AC());
       if (ctx.state === 'suspended') await ctx.resume();
       this._build();
 
@@ -117,7 +119,8 @@ export class Ambience {
       // load, fall back to the additive choir - worse, but it always works.
       this.choir = new Choir();
       const ok = await this.choir.init(ctx, {
-        reverbSend: this.reverbSend, dryOut: this.bright,
+        reverbSend: this.reverbSend,
+        dryOut: this.bright,
       });
       if (ok) this.choir.setRoot(ROOTS[this.level]);
       else this._buildChoir();
@@ -157,7 +160,7 @@ export class Ambience {
     preDelay.connect(this.reverb);
     this.reverb.connect(wet);
     wet.connect(comp);
-    this.reverbSend = preDelay;      // anything wanting to sound far off
+    this.reverbSend = preDelay; // anything wanting to sound far off
 
     this.dry = ctx.createGain();
     this.dry.gain.value = 0.55;
@@ -193,7 +196,7 @@ export class Ambience {
     const root = ROOTS[0];
     this.drone = { oscs: [], gains: [] };
     const parts = [
-      { mult: 1, type: 'sine', gain: 0.30, detune: -4 },
+      { mult: 1, type: 'sine', gain: 0.3, detune: -4 },
       { mult: 2, type: 'sine', gain: 0.16, detune: +5 },
       { mult: 3, type: 'triangle', gain: 0.055, detune: -7 },
     ];
@@ -293,17 +296,17 @@ export class Ambience {
     formant.type = 'peaking';
     formant.frequency.value = 820;
     formant.Q.value = 0.65;
-    formant.gain.value = 2.5;      // a hint of throat; +6dB here was a shout
+    formant.gain.value = 2.5; // a hint of throat; +6dB here was a shout
 
     this.choirTone = ctx.createBiquadFilter();
     this.choirTone.type = 'lowpass';
     this.choirTone.frequency.value = 900;
-    this.choirTone.Q.value = 0.3;              // no resonant lip on the cutoff
+    this.choirTone.Q.value = 0.3; // no resonant lip on the cutoff
 
     const airCut = ctx.createBiquadFilter();
     airCut.type = 'highshelf';
     airCut.frequency.value = 2200;
-    airCut.gain.value = -12;                   // permanent ceiling on the sizzle
+    airCut.gain.value = -12; // permanent ceiling on the sizzle
 
     const sum = ctx.createGain();
     sum.gain.value = 1;
@@ -332,9 +335,10 @@ export class Ambience {
       breathAmt.connect(voice.gain);
       breath.start();
 
-      for (const cents of [-4, +4]) {      // gentle beating, not a wobble
+      for (const cents of [-4, +4]) {
+        // gentle beating, not a wobble
         const osc = ctx.createOscillator();
-        osc.type = 'sine';        // triangles gave it an edge; ethereal wants none
+        osc.type = 'sine'; // triangles gave it an edge; ethereal wants none
         osc.frequency.value = base;
         osc.detune.value = cents + (Math.random() - 0.5) * 4;
         const g = ctx.createGain();
@@ -356,7 +360,7 @@ export class Ambience {
     osc.detune.value = (Math.random() - 0.5) * 8;
 
     const g = ctx.createGain();
-    const attack = Math.max(0.35, Math.min(1.6, dur * 0.35));   // never fast enough to click
+    const attack = Math.max(0.35, Math.min(1.6, dur * 0.35)); // never fast enough to click
     g.gain.setValueAtTime(0.0001, when);
     g.gain.exponentialRampToValueAtTime(amp, when + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
@@ -366,10 +370,17 @@ export class Ambience {
 
     const out = dest || this.bus;
     osc.connect(g);
-    if (p) { g.connect(p); p.connect(out); } else g.connect(out);
+    if (p) {
+      g.connect(p);
+      p.connect(out);
+    } else g.connect(out);
     osc.start(when);
     osc.stop(when + dur + 0.1);
-    osc.onended = () => { osc.disconnect(); g.disconnect(); if (p) p.disconnect(); };
+    osc.onended = () => {
+      osc.disconnect();
+      g.disconnect();
+      if (p) p.disconnect();
+    };
   }
 
   // ---------------------------------------------------------------- events
@@ -379,8 +390,15 @@ export class Ambience {
     const t = this.ctx.currentTime;
     const root = ROOTS[this.level] * 4;
     [0, 5, 7, 12].forEach((s, i) => {
-      this._note(noteHz(root, s), t + i * 0.16, 2.6 - i * 0.2, 0.10, (i - 1.5) * 0.3,
-                 'triangle', this.bright);
+      this._note(
+        noteHz(root, s),
+        t + i * 0.16,
+        2.6 - i * 0.2,
+        0.1,
+        (i - 1.5) * 0.3,
+        'triangle',
+        this.bright,
+      );
     });
   }
 
@@ -391,8 +409,15 @@ export class Ambience {
     const root = ROOTS[this.level] * 8;
     // rising fourths, arriving on the octave as the light goes in
     [0, 5, 10, 12].forEach((s, i) => {
-      this._note(noteHz(root, s), t + i * 0.18, 2.2, 0.055, (i - 1.5) * 0.35,
-                 'sine', this.bright);
+      this._note(
+        noteHz(root, s),
+        t + i * 0.18,
+        2.2,
+        0.055,
+        (i - 1.5) * 0.35,
+        'sine',
+        this.bright,
+      );
     });
     // a low swell underneath so it has weight
     this._note(noteHz(ROOTS[this.level] * 2, 0), t + 0.5, 3.4, 0.05, 0, 'sine');
@@ -402,7 +427,15 @@ export class Ambience {
   pickup() {
     if (!this.ready || this.muted) return;
     const t = this.ctx.currentTime;
-    this._note(noteHz(ROOTS[this.level] * 4, 7), t, 1.6, 0.075, 0, 'sine', this.bright);
+    this._note(
+      noteHz(ROOTS[this.level] * 4, 7),
+      t,
+      1.6,
+      0.075,
+      0,
+      'sine',
+      this.bright,
+    );
   }
 
   setLevel(i) {
@@ -416,9 +449,10 @@ export class Ambience {
       osc.frequency.setTargetAtTime(root * mult, t, 2.5);
     });
     if (this.usingVocalTract) this.choir.setRoot(root);
-    else this.choir.oscs.forEach(({ osc, semis }) => {
-      osc.frequency.setTargetAtTime(noteHz(root, semis) * 8, t, 2.5);
-    });
+    else
+      this.choir.oscs.forEach(({ osc, semis }) => {
+        osc.frequency.setTargetAtTime(noteHz(root, semis) * 8, t, 2.5);
+      });
   }
 
   setMuted(m) {
@@ -429,7 +463,10 @@ export class Ambience {
     this.master.gain.setTargetAtTime(m ? 0 : this.volume * 0.26, t, 0.12);
   }
 
-  toggle() { this.setMuted(!this.muted); return !this.muted; }
+  toggle() {
+    this.setMuted(!this.muted);
+    return !this.muted;
+  }
 
   /**
    * @param proximity 0..1 - how strongly the torch senses a hidden PASSAGE.
@@ -462,11 +499,15 @@ export class Ambience {
       this.choir.set(swell, p);
     } else {
       this.choirWet.gain.setTargetAtTime(swell * 0.46, now, 2.0);
-      this.choirDry.gain.setTargetAtTime(Math.max(0, swell - 0.45) * 0.20, now, 2.0);
+      this.choirDry.gain.setTargetAtTime(
+        Math.max(0, swell - 0.45) * 0.2,
+        now,
+        2.0,
+      );
       this.choirTone.frequency.setTargetAtTime(lerp(680, 1650, w), now, 1.8);
       const spread = 4 + p * 6;
       this.choir.oscs.forEach(({ osc }, i) => {
-        osc.detune.setTargetAtTime((i % 2 ? spread : -spread), now, 2.0);
+        osc.detune.setTargetAtTime(i % 2 ? spread : -spread, now, 2.0);
       });
     }
 
@@ -479,8 +520,12 @@ export class Ambience {
       // A walk wanders; independent random picks just sound arbitrary.
       const leap = Math.random() < 0.18;
       this._degree += leap
-        ? (Math.random() < 0.5 ? -3 : 3)
-        : (Math.random() < 0.5 ? -1 : 1);
+        ? Math.random() < 0.5
+          ? -3
+          : 3
+        : Math.random() < 0.5
+          ? -1
+          : 1;
       this._degree = Math.max(-7, Math.min(9, this._degree));
 
       const oct = 3 + (Math.random() < 0.3 ? 1 : 0) + (p > 0.5 ? 1 : 0);
@@ -489,12 +534,24 @@ export class Ambience {
       const freq = noteHz(ROOTS[this.level] * Math.pow(2, oct - 1), semis);
 
       const dur = 3.4 + Math.random() * 3.4;
-      this._note(freq, now + 0.05, dur, 0.055 + p * 0.02,
-                 (Math.random() - 0.5) * 1.2, 'sine');
+      this._note(
+        freq,
+        now + 0.05,
+        dur,
+        0.055 + p * 0.02,
+        (Math.random() - 0.5) * 1.2,
+        'sine',
+      );
       // a quiet fifth below, sometimes, for body
       if (Math.random() < 0.35) {
-        this._note(freq * 0.5 * Math.pow(2, 7 / 12), now + 0.4, dur * 0.8, 0.03,
-                   (Math.random() - 0.5) * 0.8, 'sine');
+        this._note(
+          freq * 0.5 * Math.pow(2, 7 / 12),
+          now + 0.4,
+          dur * 0.8,
+          0.03,
+          (Math.random() - 0.5) * 0.8,
+          'sine',
+        );
       }
       // gaps shorten a little when something is close, but never become a pulse
       this._nextNote = now + lerp(4.6, 2.8, p) + Math.random() * 3.6;
