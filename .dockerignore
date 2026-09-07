@@ -1,0 +1,29 @@
+# Credentials must never enter the image. The server reads them from the
+# environment at runtime (compose `env_file`, or `docker run --env-file`).
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+.git
+.gitignore
+
+# docs and media are ~8MB of gifs the runtime never serves
+docs
+README.md
+AGENTS.md
+CLAUDE.md
+
+# asset SOURCES are not needed at runtime - the built .glb files in public/ are
+blender
+tools/gen_levels.mjs
+tools/build_assets.sh
+
+Dockerfile
+.dockerignore
+compose.yaml
+.nvmrc
+.playwright-mcp
+**/__pycache__
+*.blend1

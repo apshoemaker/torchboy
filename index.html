@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>Torchboy — The Deep Hollow</title>
+<style>
+  :root {
+    --ink: #e8e2d6;
+    --dim: #8a8578;
+    --flame: #ff9a3c;
+    --cold: #7fd4ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #06070a; }
+  body {
+    font: 500 14px/1.4 ui-rounded, "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    color: var(--ink); -webkit-font-smoothing: antialiased;
+    user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  #view { display: block; width: 100%; height: 100%; }
+
+  /* ---------------------------------------------------------------- HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  .panel {
+    position: absolute; top: max(14px, env(safe-area-inset-top));
+    left: 14px; display: flex; flex-direction: column; gap: 8px;
+  }
+  #level-name {
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--dim); text-shadow: 0 1px 3px #000;
+  }
+  /* the sense meter mirrors the flame: amber when calm, cold when a passage
+     is close, so the HUD and the light tell the same story */
+  #sense {
+    width: 210px; height: 9px; border-radius: 99px;
+    background: #101319; border: 1px solid #232833;
+    box-shadow: inset 0 1px 2px #0009; overflow: hidden;
+  }
+  #sense-fill {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, #ff7a2a, #ffd08a);
+    transition: width .12s linear, background .3s, box-shadow .3s;
+  }
+  #sense.warm #sense-fill { box-shadow: 0 0 10px #ffa04ccc; }
+  #sense.hot #sense-fill {
+    background: linear-gradient(90deg, #4fb8ff, #d8f2ff);
+    box-shadow: 0 0 16px #7fd4ffdd;
+    animation: gutter .4s steps(2) infinite;
+  }
+  @keyframes gutter { 50% { opacity: .5; } }
+  .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #5f5b52; }
+  .row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--dim); }
+  .row b { color: var(--cold); font-weight: 600; }
+
+  /* ------------------------------------------------------------- toasts */
+  /* narration sits low and centre, wider and quieter than a toast - it is
+     prose to be read, not a notification to be acknowledged */
+  #narration {
+    position: absolute; left: 50%; bottom: 26%;
+    transform: translate(-50%, 14px);
+    width: min(620px, 78vw); text-align: center;
+    font-size: 16px; line-height: 1.65; letter-spacing: .012em;
+    color: #cfc7b6; text-shadow: 0 2px 14px #000, 0 0 30px #0009;
+    opacity: 0; transition: opacity 1.6s ease, transform 1.6s ease;
+    font-style: italic; pointer-events: none;
+  }
+  #narration.show { opacity: 1; transform: translate(-50%, 0); }
+  /* a revelation is not his memory - it is handed to him, so it reads colder,
+     wider-set and not italic */
+  #narration.revelation {
+    font-style: normal; letter-spacing: .10em; font-size: 15px;
+    color: #cfe9fb; text-transform: uppercase;
+    text-shadow: 0 0 22px #7fd4ff66, 0 2px 14px #000;
+  }
+
+  /* ---------------------------------------------------------- minimap */
+  #map {
+    position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px;
+    width: 148px;                       /* grows on hover; canvas is fixed-res */
+    padding: 6px; border-radius: 10px;
+    background: #0a0c11c9; border: 1px solid #ffffff12;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 6px 24px #0008;
+    pointer-events: auto;               /* the only HUD element that takes the mouse */
+    transition: width .28s cubic-bezier(.2,.7,.3,1), box-shadow .28s;
+    cursor: default;
+  }
+  #map:hover { width: 340px; box-shadow: 0 10px 40px #000b; }
+  #minimap {
+    display: block; width: 100%; height: auto;
+    image-rendering: auto; border-radius: 5px;
+    /* the unexplored ground: a faint hatch, quiet enough to read as fog
+       rather than as a pattern competing with the map */
+    background:
+      repeating-linear-gradient(45deg, #0c0e13 0 7px, #0a0c10 7px 14px);
+  }
+  #map-label {
+    position: absolute; left: 10px; bottom: 9px;
+    font-size: 9px; letter-spacing: .16em; color: #6f6a60;
+    text-transform: uppercase; pointer-events: none;
+    text-shadow: 0 1px 3px #000;
+  }
+  #map:hover #map-label { color: #9a9184; }
+
+  #toast {
+    position: absolute; left: 50%; bottom: 16%;
+    transform: translate(-50%, 10px);
+    padding: 9px 18px; border-radius: 99px;
+    background: #0d0f14e0; border: 1px solid #ffffff14;
+    backdrop-filter: blur(6px);
+    opacity: 0; transition: opacity .3s, transform .3s;
+    font-size: 13px; letter-spacing: .01em; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #hint {
+    position: absolute; left: 50%; top: 12%; transform: translateX(-50%);
+    color: #9fe4ff; font-size: 14px; letter-spacing: .18em; text-transform: uppercase;
+    opacity: 0; transition: opacity .4s; text-shadow: 0 0 18px #4fb8ff90;
+  }
+  #hint.show { opacity: 1; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .45; } }
+
+  #keys {
+    position: absolute; right: 14px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    font-size: 11px; color: #5f5b52; text-align: right; line-height: 1.7;
+  }
+  #sound { color: #6f6a60; }
+  #sound.off { color: #4a463f; text-decoration: line-through; }
+  kbd {
+    background: #191b21; border: 1px solid #2c2f38; border-bottom-width: 2px;
+    border-radius: 4px; padding: 1px 5px; font: inherit; font-size: 10px; color: #a8a294;
+  }
+
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+  /* the ending goes to daylight, not to black */
+  #fade.light { background: #fdf6e8; }
+
+  #ending {
+    position: fixed; inset: 0; display: grid; place-content: center; gap: 18px;
+    padding: 0 12vw; text-align: center; opacity: 0; pointer-events: none;
+    transition: opacity 2.2s ease;
+    z-index: 12;
+  }
+  #ending.show { opacity: 1; }
+  /* at the end everything else goes: no map, no counters, no key hints */
+  #hud.ended > *:not(#ending) { opacity: 0; transition: opacity 1.4s ease; }
+  #ending h2 { text-shadow: 0 1px 0 #fff8ec; }
+  #ending h2 {
+    margin: 0; font-size: 26px; font-weight: 600; letter-spacing: .05em;
+    color: #4a4034;
+  }
+  #ending p {
+    margin: 0; font-size: 17px; line-height: 1.75; font-style: italic;
+    color: #6b5f50; max-width: 640px;
+  }
+  /* Held back until the ending has had time to be read: appearing with the
+     text would put something to click on top of the last thing he says.
+     #ending is pointer-events:none, so the button has to opt back in. */
+  #restart {
+    justify-self: center; margin-top: 10px;
+    font: inherit; font-size: 13px; letter-spacing: .09em; text-transform: lowercase;
+    color: #6b5f50; background: transparent;
+    border: 1px solid rgba(107, 95, 80, 0.35); border-radius: 2px;
+    padding: 9px 20px; cursor: pointer;
+    opacity: 0; pointer-events: none;
+    transition: opacity 1.6s ease, background-color .25s ease,
+                border-color .25s ease, color .25s ease;
+  }
+  #restart.show { opacity: 1; pointer-events: auto; }
+  #restart:hover, #restart:focus-visible {
+    background: rgba(107, 95, 80, 0.08); border-color: rgba(107, 95, 80, 0.6);
+    color: #4a4034; outline: none;
+  }
+
+  /* ------------------------------------------------------------ loading */
+  #loading {
+    position: fixed; inset: 0; display: grid; place-content: center; gap: 18px;
+    background: radial-gradient(60% 60% at 50% 45%, #14161d, #05060a 70%);
+    z-index: 10; transition: opacity .7s;
+  }
+  #loading.gone { opacity: 0; pointer-events: none; }
+  #loading h1 {
+    margin: 0; font-size: 30px; font-weight: 600; letter-spacing: .04em;
+    text-align: center;
+    background: linear-gradient(180deg, #ffd9a1, #ff8a3c);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .what { text-align: center; color: var(--dim); font-size: 12px; letter-spacing: .1em; }
+  .bar { width: 260px; height: 3px; background: #1b1d24; border-radius: 99px; overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0; background: var(--flame); transition: width .3s; }
+  .err { color: #ff8a7a; text-align: center; max-width: 460px; }
+  .err code { display: block; margin-top: 8px; color: #a89e94; font-size: 12px; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hud">
+  <div class="panel">
+    <div id="level-name">—</div>
+    <div class="lbl">the flame senses</div>
+    <div id="sense"><div id="sense-fill"></div></div>
+    <div class="row">passages here <b id="found">0/0</b> · embers <b id="embers">0</b></div>
+  </div>
+  <div id="map">
+    <canvas id="minimap"></canvas>
+    <div id="map-label">1/3</div>
+  </div>
+  <div id="hint"></div>
+  <div id="narration"></div>
+  <div id="toast"></div>
+  <div id="keys">
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp; · &nbsp; drag to pivot &nbsp; · &nbsp; <kbd>Q</kbd><kbd>E</kbd> turn<br>
+    watch the flame — it stirs and cools near a hidden way<br>
+    <span id="sound">sound on</span> · <kbd>M</kbd> to mute
+  </div>
+</div>
+
+<div id="fade"></div>
+<div id="ending">
+  <h2 id="ending-title"></h2>
+  <p id="ending-text"></p>
+  <button id="restart" type="button">play again</button>
+</div>
+<div id="loading">
+  <h1>Torchboy</h1>
+  <div class="bar"><span></span></div>
+  <div class="what">waking up</div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

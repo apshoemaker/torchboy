@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.playwright-mcp/
+*.blend1
+__pycache__/
+
+# never commit credentials
+.env
+.env.*
+!.env.example

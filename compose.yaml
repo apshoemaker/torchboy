@@ -1,0 +1,19 @@
+services:
+  torchboy:
+    build: .
+    image: torchboy:latest
+    ports:
+      - "${PORT:-8080}:8080"
+    # Credentials come from the environment, never from the image. Without them
+    # the game still runs and uses its written fallback beats.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
